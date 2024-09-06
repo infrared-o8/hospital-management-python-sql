@@ -1,0 +1,46 @@
+1. Patients Table
+This will store information about the patients.
+Columns:
+    patient_id (Primary Key, INT, AUTO_INCREMENT): Unique identifier for each patient.
+    name (VARCHAR): Patient's name.
+    gender (VARCHAR): Male/Female/Other.
+    date_of_birth (DATE): Patient’s birthdate.
+    phone_number (VARCHAR): Contact number.
+
+2. Doctors Table
+This will store information about doctors working in the facility.
+Columns:
+    doctor_id (Primary Key, INT, AUTO_INCREMENT): Unique identifier for each doctor.
+    first_name (VARCHAR): Doctor's name.
+    specialization (VARCHAR): Doctor’s area of expertise (e.g., cardiology, pediatrics).
+    phone_number (VARCHAR): Doctor's contact number.
+    years_of_experience (INT): Number of years of experience.
+    consultation_fee (DECIMAL): Doctor's consultation fee.
+
+3. Appointments Table
+This will store information about patient appointments.
+Columns:
+    appointment_id (Primary Key, INT, AUTO_INCREMENT): Unique identifier for each appointment.
+    patient_id (Foreign Key, INT): References the patient in the Patients table.
+    doctor_id (Foreign Key, INT): References the doctor in the Doctors table.
+    appointment_date (DATE): The date of the appointment.
+    appointment_time (TIME): Time of the appointment.
+    appointment_reason (TEXT): Reason for the appointment (e.g., check-up, surgery).
+    status (VARCHAR): Appointment status (e.g., scheduled, canceled, completed).
+
+4. Medical History for Patients Table
+This will store a patient’s medical history.
+Columns:
+    record_id (Primary Key, INT, AUTO_INCREMENT): Unique identifier for each medical record.
+    patient_id (Foreign Key, INT): References the patient in the Patients table.
+    doctor_id (Foreign Key, INT): References the doctor who treated the patient.
+    visit_date (DATE): Date of the patient’s visit.
+    diagnosis (TEXT): Diagnosis provided by the doctor.
+    prescribed_treatment (TEXT): Treatment or medications prescribed.
+
+5. Prescriptions Table
+This will store the details of prescribed medications.
+Columns:
+    prescription_id (Primary Key, INT, AUTO_INCREMENT): Unique identifier for each prescription.
+    record_id (Foreign Key, INT): References the related medical record.
+    medication_name (VARCHAR): Name of the medication.
