@@ -24,7 +24,6 @@ Columns:
     patient_id (Foreign Key, INT): References the patient in the Patients table.
     doctor_id (Foreign Key, INT): References the doctor in the Doctors table.
     appointment_date (DATE): The date of the appointment.
-    appointment_time (TIME): Time of the appointment.
     appointment_reason (TEXT): Reason for the appointment (e.g., check-up, surgery).
     status (VARCHAR): Appointment status (e.g., scheduled, canceled, completed).
 
@@ -44,3 +43,20 @@ Columns:
     prescription_id (Primary Key, INT, AUTO_INCREMENT): Unique identifier for each prescription.
     record_id (Foreign Key, INT): References the related medical record.
     medication_name (VARCHAR): Name of the medication.
+
+Usage:
+
+Should allow for patients to log in/sign up. 
+Patients can access, modify their info from patients table.
+schedule appointments creates a new record in appointments table.
+choose a doctor from doctors table whose ID will be used,
+choose appointment date and reason.
+
+after appointment status becomes completed, add appointment 
+details to medical history for patient. 
+
+Prescriptions table is pre-made.
+
+[doctors can log in. 
+
+doctors should be able to view any pending appointments, and] - not sure
