@@ -29,20 +29,32 @@ def start_program():
     else:
         attain_creds(current_user_type)
 
-def make_new_record(ordered_patient_table, patient_name):
+def make_new_record(ordered_table, name, usertype):
         global current_user_data
-        new_patient_data = (int(ordered_patient_table[-1][0]) + 1, patient_name)
+        if usertype == "P":
+            new_patient_data = (int(ordered_table[-1][0]) + 1, name)
 
-        c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
-        database.commit()
+            c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
+            database.commit()
 
-        c.execute("select * from patients")
-        confirm_data = c.fetchall()
-        print("Updated patients table\n", confirm_data)
+            c.execute("select * from patients")
+            confirm_data = c.fetchall()
+            print("Updated patients table\n", confirm_data)
 
-        c.execute(f"select * from patients where PatientID = {new_patient_data[0]}")
-        current_user_data = c.fetchone()
-        #print(current_user_data)
+            c.execute(f"select * from patients where PatientID = {new_patient_data[0]}")
+            current_user_data = c.fetchone()
+        elif usertype == "D":
+            new_doctor_data = (int(ordered_table[-1][0]) + 1, name)
+
+            c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
+            database.commit()
+
+            c.execute("select * from doctors")
+            confirm_data = c.fetchall()
+            print("Updated doctors table\n", confirm_data)
+
+            c.execute(f"select * from doctors where doctorID = {new_doctor_data[0]}")
+            current_user_data = c.fetchone()
 
 def signup(user_type):
     global current_user_data
