@@ -209,7 +209,7 @@ def viewDoctorDetails(doctorID):
     c.execute(f"select * from doctors where doctorID = '{doctorID}'")
     return c.fetchone()
 
-def viewPrescriptions(pID, all = True):
+def viewPrescriptions(pID = None, all = True):
     if all:
         c.execute("select * from prescriptions")
         return c.fetchall()
@@ -255,7 +255,7 @@ start_program()
 
 
 all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments history'] #also update own info, group doctors by specialization, view pending appointments
-options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View all prescriptions', 'Access appointments history' if current_user_type == "D" else None]
+options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View prescriptions', 'Access appointments history' if current_user_type == "D" else None]
 options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
 #Doctor's/Patients Panel
 while True:
