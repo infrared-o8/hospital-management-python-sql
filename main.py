@@ -5,8 +5,8 @@ from prettytable import PrettyTable, from_db_cursor
 import pickle
 import bcrypt
 import pyfiglet
-'''import os
-from pathlib import Path'''
+import os
+from pathlib import Path
 
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
@@ -14,25 +14,41 @@ c = database.cursor()
 current_user_type = None
 current_user_data = None
 
-'''# Define the path to the local directory
+# Define the path to the local directory
 directory = Path.home() / "HospitalManagement-PythonSQL"  # This creates a folder in the user's home directory
 
 # Create the directory if it doesn't exist
 os.makedirs(directory, exist_ok=True)
 
 # Define the login file path
-login_file = directory / "creds.dat"'''
+login_file = directory / "creds.dat"
 
 def start_program():
     global current_user_type
     global current_user_data
 
     try:
-        bfile = open("login_file.dat", "rb")
+        bfile = open(login_file, "rb")
     except Exception as e:
         print("Some error occured while trying to find existing login-file:", e)
         print("Proceeding to normal login...")
-        attain_creds(current_user_type)
+        try:
+            print("Using as patient/doctor?\n")
+            user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor'])))
+            if user == 1:
+                #logging in as patient
+                current_user_type = 'P'
+            elif user == 2:
+                #logging in as doctor
+                current_user_type = 'D'
+            else:
+                print("Something went wrong. Try again...\n")
+                start_program()
+        except ValueError:
+            print("Input was of incorrect datatype. Try again...\n")
+            start_program()
+        else:
+            attain_creds(current_user_type)
     else:
         bfilecontents = pickle.load(bfile)
         print("Found an existing login file:", bfilecontents, "\nConfirm login with these credentials?")
@@ -78,7 +94,7 @@ def make_new_record(ordered_table, name, usertype):
 
             c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
             current_user_data = c.fetchone()
-            bfile = open("login_file.dat", "wb")
+            bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data], bfile)
         elif usertype == "D":
             new_doctor_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}".upper(), name)
@@ -92,7 +108,7 @@ def make_new_record(ordered_table, name, usertype):
 
             c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
             current_user_data = c.fetchone()
-            bfile = open("login_file.dat", "wb")
+            bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data], bfile)
 
 def signup(user_type):
@@ -148,7 +164,7 @@ def login(user_type):
             print(f"Succesfully retrieved patient data: {record}")
             current_user_data = record
 
-            bfile = open("login_file.dat", "wb")
+            bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data], bfile)
 
     elif user_type == "D":
@@ -163,7 +179,7 @@ def login(user_type):
             print(f"Succesfully retrieved doctor data: {record}")
             current_user_data = record
 
-            bfile = open("login_file.dat", "wb")
+            bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data], bfile)
 
 
