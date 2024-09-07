@@ -19,7 +19,7 @@ def start_program():
             current_user_type = 'P'
         elif user == 2:
             #logging in as doctor
-            current_user = 'D'
+            current_user_type = 'D'
         else:
             print("Something went wrong. Try again...\n")
             start_program()
@@ -30,6 +30,7 @@ def start_program():
         attain_creds(current_user_type)
 
 def make_new_record(ordered_patient_table, patient_name):
+        global current_user_data
         new_patient_data = (int(ordered_patient_table[-1][0]) + 1, patient_name)
 
         c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
@@ -41,57 +42,92 @@ def make_new_record(ordered_patient_table, patient_name):
 
         c.execute(f"select * from patients where PatientID = {new_patient_data[0]}")
         current_user_data = c.fetchone()
-        print(current_user_data)
+        #print(current_user_data)
 
-def signup():
+def signup(user_type):
     global current_user_data
     #get required info
-    patient_name = input("Enter patient name: ")
-    #check if it already exists in patients table.
-    c.execute('select * FROM patients ORDER BY PatientID')
-    ordered_patient_table = c.fetchall()
-    (pExists, patient_record) = zampy.check_record_exists(patient_name, 1, ordered_patient_table)
-    if pExists:
-        print(f"Username already exists with patient data: {patient_record}!\nLogging in...")
-        confirm = input("Do you confirm this is your data? (Y/N): ")
-        if confirm in 'Yy':
-            current_user_data = patient_record
+    if user_type == "P":
+        patient_name = input("Enter patient name: ")
+        #check if it already exists in patients table.
+        c.execute('select * FROM patients ORDER BY PatientID')
+        ordered_patient_table = c.fetchall()
+        (pExists, patient_record) = zampy.check_record_exists(patient_name, 1, ordered_patient_table)
+        if pExists:
+            print(f"Username already exists with patient data: {patient_record}!") #add column names - !!
+            confirm = input("Do you confirm this is your data? (Y/N): ")
+            if confirm in 'Yy':
+                current_user_data = patient_record
+            else:
+                make_new_record(ordered_patient_table, patient_name)
         else:
+            print("Patient record doesn't exist! Making new record...")
+            #doesnt exist, make a new record.
             make_new_record(ordered_patient_table, patient_name)
-    else:
-        print("User doesnt exist! Making new record...")
-        #doesnt exist, make a new record.
-        make_new_record(ordered_patient_table, patient_name)
+    elif user_type == "D":
+        doctor_name = input("Enter doctor name: ")
+        #check if it already exists in doctors table.
+        c.execute('select * FROM doctors ORDER BY DoctorID')
+        ordered_doctor_table = c.fetchall()
+        (dExists, doctor_record) = zampy.check_record_exists(doctor_name, 1, ordered_doctor_table)
+        if dExists:
+            print(f"Username already exists with doctor data: {doctor_record}!") #add column names - !!
+            confirm = input("Do you confirm this is your data? (Y/N): ")
+            if confirm in 'Yy':
+                current_user_data = doctor_record
+            else:
+                make_new_record(ordered_doctor_table, doctor_name)
+        else:
+            print("Doctor record doesn't exist! Making new record...")
+            #doesnt exist, make a new record.
+            make_new_record(ordered_doctor_table, doctor_name)
 
-
-def login():
+def login(user_type):
     global current_user_data
-    requested_id = int(input("Enter patient ID: "))
-    c.execute(f"select * from patients where patientid = {requested_id}")
-    record = c.fetchone()
-    if record is None:
-        requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
-        if requSignUp in 'Yy':
-            signup()
-    else:
-        print(f"Succesfully retrieved patient data: {record}")
-        current_user_data = record
+    if user_type == "P":
+        requested_id = int(input("Enter patient ID: "))
+        c.execute(f"select * from patients where patientid = {requested_id}")
+        record = c.fetchone()
+        if record is None:
+            requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
+            if requSignUp in 'Yy':
+                signup()
+        else:
+            print(f"Succesfully retrieved patient data: {record}")
+            current_user_data = record
+    elif user_type == "D":
+        requested_id = int(input("Enter doctor ID: "))
+        c.execute(f"select * from doctors where doctorid = {requested_id}")
+        record = c.fetchone()
+        if record is None:
+            requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
+            if requSignUp in 'Yy':
+                signup()
+        else:
+            print(f"Succesfully retrieved doctor data: {record}")
+            current_user_data = record
 
 def attain_creds(currentUserType):
-    global current_user_data
     if currentUserType == 'P':
-        #print('current patient!')
         print("Log in or sign up as patient?")
         useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
         if useridentify == 1:
             print("Running sign up!")
-            signup()
+            signup(current_user_type)
             
         elif useridentify == 2:
             print("Running login!")
-            login()
+            login(current_user_type)
     elif currentUserType == 'D':
-        print('current doctor!')
+        print("Log in or sign up as doctor?")
+        useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
+        if useridentify == 1:
+            print("Running sign up!")
+            signup(current_user_type)
+            
+        elif useridentify == 2:
+            print("Running login!")
+            login(current_user_type)
 
 
 
