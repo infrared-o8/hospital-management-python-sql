@@ -35,6 +35,7 @@ Columns:
     visit_date (DATE): Date of the patient’s visit.
     diagnosis (TEXT): Diagnosis provided by the doctor.
     prescribed_treatment (TEXT): Treatment or medications prescribed.
+accesed by patient to view, by doctor to edit/add data.
 
 5. Prescriptions Table
 This will store the details of prescribed medications.

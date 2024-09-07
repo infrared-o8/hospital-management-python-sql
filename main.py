@@ -144,3 +144,8 @@ def attain_creds(currentUserType):
 
 
 start_program()
+options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None]
+#Doctor's/Patients Panel
+while True:
+    print("Enter action: ")
+    action = int(input(zampy.make_menu_from_options(options)))
