@@ -1,6 +1,7 @@
 import mysql.connector
 from datetime import datetime
 
+
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
 
@@ -29,6 +30,7 @@ def start_program():
 def login(currentUserType):
     if currentUserType == 'P':
         #print('current patient!')
+        useridentify = input("Log in or sign up as patient?")
     elif currentUserType == 'D':
         #print('current doctor!')
 
