@@ -43,7 +43,7 @@ Columns:
     record_id (Foreign Key, INT): References the related medical record.
     medication_name (VARCHAR): Name of the medication.
 
-Patient ID: pt1, pt2 ... 
+Patient ID: 1, 2 ... 
 
 Usage:
 

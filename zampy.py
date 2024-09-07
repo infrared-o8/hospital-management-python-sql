@@ -228,8 +228,8 @@ def make_menu_from_options(options: list) -> str:
         final += f"{index}: {options[index - 1]}\n"
     return final
 
-def check_record_exists(checkingParameter, indexInRecord, tableData) -> bool:
+def check_record_exists(checkingParameter, indexInRecord, tableData):
     for record in tableData:
         if record[indexInRecord] == checkingParameter:
-            return True
-    return False
+            return True, record
+    return False, None
