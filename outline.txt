@@ -34,15 +34,15 @@ Columns:
     doctor_id (Foreign Key, INT): References the doctor who treated the patient.
     visit_date (DATE): Date of the patient’s visit.
     diagnosis (TEXT): Diagnosis provided by the doctor.
-    prescribed_treatment (TEXT): Treatment or medications prescribed.
+    prescription (TEXT): Treatment or medications prescribed.
 accesed by patient to view, by doctor to edit/add data.
 
 5. Prescriptions Table
 This will store the details of prescribed medications.
 Columns:
     prescription_id (Primary Key, INT, AUTO_INCREMENT): Unique identifier for each prescription.
-    record_id (Foreign Key, INT): References the related medical record.
     medication_name (VARCHAR): Name of the medication.
+    dosage (VARCHAR): Dosage prescribed.
 
 Patient ID: 1, 2 ... 
 

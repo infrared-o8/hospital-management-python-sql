@@ -124,28 +124,56 @@ def attain_creds(currentUserType):
         print("Log in or sign up as patient?")
         useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
         if useridentify == 1:
-            print("Running sign up!")
             signup(current_user_type)
             
         elif useridentify == 2:
-            print("Running login!")
             login(current_user_type)
     elif currentUserType == 'D':
         print("Log in or sign up as doctor?")
         useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
         if useridentify == 1:
-            print("Running sign up!")
             signup(current_user_type)
             
         elif useridentify == 2:
-            print("Running login!")
             login(current_user_type)
 
-
+def viewPatientDetails(patientID):
+    c.execute(f"select * from patients where PatientID = {patientID}")
+    return c.fetchone()
 
 start_program()
-options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None]
+all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View all prescriptions', 'Access medical history of a patient'] #also update own info
+options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View all prescriptions']
+options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
 #Doctor's/Patients Panel
 while True:
     print("Enter action: ")
-    action = int(input(zampy.make_menu_from_options(options)))
+    tempIndex = int(input(options_menu_str))
+    action = options_dict[tempIndex]
+    try:
+        index = all_options.index(action)
+    except Exception as e:
+        print(f"Error occured:", e)
+    else:
+        if index == 0:
+            #view a patient's details
+            patientID = int(input("Enter patient ID: "))
+            data = viewPatientDetails(patientID)
+            print("Requested data:", data)
+        elif index == 1:
+            #View a doctor\'s details
+            print(action)
+        elif index == 2:
+            #Make an appointment
+            print(action)
+        elif index == 3:
+            #Access medical history
+            print(action)
+        elif index == 4:
+            #View all prescriptions
+            print(action)
+        elif index == 5:
+            #Access medical history of a patient
+            print(action)
+        else:
+            print("Something went wrong.")

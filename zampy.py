@@ -222,13 +222,20 @@ def random_genre() -> str:
     '''
     return r.choice(genres)
 
-def make_menu_from_options(options: list) -> str:
+def make_menu_from_options(options: list, dictVersion = False) -> str:
     final = ""
+    dictv = dict()
     while None in options:
         options.remove(None)
-    for index in range(1, len(options) + 1):
-        final += f"{index}: {options[index - 1]}\n"
-    return final
+    if dictVersion:
+        for index in range(1, len(options) + 1):
+            final += f"{index}: {options[index - 1]}\n"
+            dictv[index] = options[index - 1]
+        return final, dictv
+    else:
+        for index in range(1, len(options) + 1):
+            final += f"{index}: {options[index - 1]}\n"
+        return final
 
 def check_record_exists(checkingParameter, indexInRecord, tableData) -> tuple:
     for record in tableData:
