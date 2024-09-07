@@ -32,7 +32,7 @@ def start_program():
 def make_new_record(ordered_table, name, usertype):
         global current_user_data
         if usertype == "P":
-            new_patient_data = (int(ordered_table[-1][0]) + 1, name)
+            new_patient_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}", name)
 
             c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
             database.commit()
@@ -41,10 +41,10 @@ def make_new_record(ordered_table, name, usertype):
             confirm_data = c.fetchall()
             print("Updated patients table\n", confirm_data)
 
-            c.execute(f"select * from patients where PatientID = {new_patient_data[0]}")
+            c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
             current_user_data = c.fetchone()
         elif usertype == "D":
-            new_doctor_data = (int(ordered_table[-1][0]) + 1, name)
+            new_doctor_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}", name)
 
             c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
             database.commit()
@@ -53,7 +53,7 @@ def make_new_record(ordered_table, name, usertype):
             confirm_data = c.fetchall()
             print("Updated doctors table\n", confirm_data)
 
-            c.execute(f"select * from doctors where doctorID = {new_doctor_data[0]}")
+            c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
             current_user_data = c.fetchone()
 
 def signup(user_type):
@@ -71,11 +71,11 @@ def signup(user_type):
             if confirm in 'Yy':
                 current_user_data = patient_record
             else:
-                make_new_record(ordered_patient_table, patient_name)
+                make_new_record(ordered_patient_table, patient_name, user_type)
         else:
             print("Patient record doesn't exist! Making new record...")
             #doesnt exist, make a new record.
-            make_new_record(ordered_patient_table, patient_name)
+            make_new_record(ordered_patient_table, patient_name, user_type)
     elif user_type == "D":
         doctor_name = input("Enter doctor name: ")
         #check if it already exists in doctors table.
@@ -88,17 +88,17 @@ def signup(user_type):
             if confirm in 'Yy':
                 current_user_data = doctor_record
             else:
-                make_new_record(ordered_doctor_table, doctor_name)
+                make_new_record(ordered_doctor_table, doctor_name, user_type)
         else:
             print("Doctor record doesn't exist! Making new record...")
             #doesnt exist, make a new record.
-            make_new_record(ordered_doctor_table, doctor_name)
+            make_new_record(ordered_doctor_table, doctor_name, user_type)
 
 def login(user_type):
     global current_user_data
     if user_type == "P":
-        requested_id = int(input("Enter patient ID: "))
-        c.execute(f"select * from patients where patientid = {requested_id}")
+        requested_id = (input("Enter patient ID: "))
+        c.execute(f"select * from patients where patientid = '{requested_id}'")
         record = c.fetchone()
         if record is None:
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
@@ -108,8 +108,8 @@ def login(user_type):
             print(f"Succesfully retrieved patient data: {record}")
             current_user_data = record
     elif user_type == "D":
-        requested_id = int(input("Enter doctor ID: "))
-        c.execute(f"select * from doctors where doctorid = {requested_id}")
+        requested_id = (input("Enter doctor ID: "))
+        c.execute(f"select * from doctors where doctorid = '{requested_id}'")
         record = c.fetchone()
         if record is None:
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
@@ -138,11 +138,35 @@ def attain_creds(currentUserType):
             login(current_user_type)
 
 def viewPatientDetails(patientID):
-    c.execute(f"select * from patients where PatientID = {patientID}")
+    c.execute(f"select * from patients where PatientID = '{patientID}'")
     return c.fetchone()
 
+def viewDoctorDetails(doctorID):
+    c.execute(f"select * from doctors where doctorID = '{doctorID}'")
+    return c.fetchone()
+
+def viewPrescriptions(pID, all = True):
+    if all:
+        c.execute("select * from prescriptions")
+        return c.fetchall()
+    else:
+        if pID:
+            c.execute(f"select * from prescriptions where prescriptionID = '{pID}'")
+
+def viewRecordDetails(patientID ,recordID = None, doctorID = None, all = False):
+    if recordID:
+        c.execute(f"select * from medicalhistory where recordID = '{recordID}' AND patientID = '{patientID}'")
+        return c.fetchone()
+    if doctorID:
+        c.execute(f"select * from medicalhistory where doctor = '{doctorID}' AND patientID = '{patientID}'")
+        return c.fetchall()
+    if all:
+        c.execute(f"select * from medicalhistory where patientID = '{patientID}'")
+        return c.fetchall()
+
 start_program()
-all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View all prescriptions', 'Access medical history of a patient'] #also update own info
+
+all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View all prescriptions', 'Access medical history of a patient'] #also update own info, group doctors by specialization, view pending appointments
 options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View all prescriptions']
 options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
 #Doctor's/Patients Panel
@@ -156,22 +180,33 @@ while True:
         print(f"Error occured:", e)
     else:
         if index == 0:
-            #view a patient's details
-            patientID = int(input("Enter patient ID: "))
+            patientID = (input("Enter patient ID: "))
             data = viewPatientDetails(patientID)
             print("Requested data:", data)
         elif index == 1:
-            #View a doctor\'s details
-            print(action)
+            doctorID = (input("Enter doctor ID: "))
+            data = viewDoctorDetails(doctorID)
+            print("Requested data:", data)
         elif index == 2:
             #Make an appointment
             print(action)
         elif index == 3:
-            #Access medical history
-            print(action)
+            historyOptions = ['Access using recordID', 'Access all records by specific doctor (doctorID)', 'Access all history']
+            historyIndex = int(input(zampy.make_menu_from_options(historyOptions)))
+            if historyIndex == 1:
+                recordID = (input("Enter recordID: "))
+                data = viewRecordDetails(recordID=recordID)
+                print(data)
+            elif historyIndex == 2:
+                doctorID = (input("Enter doctor ID: "))
+                data = viewRecordDetails(doctorID=doctorID)
+                print(data)
+            elif historyIndex == 3:
+                data = viewRecordDetails(current_user_data[0], all=True)
+                print(data)
         elif index == 4:
-            #View all prescriptions
-            print(action)
+            data = viewPrescriptions()
+            print(data)
         elif index == 5:
             #Access medical history of a patient
             print(action)
