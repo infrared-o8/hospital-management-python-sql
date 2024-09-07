@@ -27,12 +27,28 @@ def start_program():
         print("Input was of incorrect datatype. Try again...\n")
         start_program()
     else:
-        login(current_user)
-def login(currentUserType):
+        signin(current_user)
+
+def signin(currentUserType):
     if currentUserType == 'P':
         #print('current patient!')
         print("Log in or sign up as patient?")
-        useridentify = input(zampy.make_menu_from_options(['Sign up', 'Log in']))
+        useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
+        if useridentify == 1:
+            print("Running sign up!")
+
+            #get required info
+            patient_id = input("Enter patient ID: ")
+            #check if it already exists in patients table.
+            c.execute('select * FROM patients')
+            patients_data = c.fetchall()
+            for patient_data in patients_data:
+                if patient_data[0] == patient_id:
+                    print(f"{patient_id} already exists, with name {patient_data[1]}")
+                    return
+            
+        elif useridentify == 2:
+            print("Running log in!")
     elif currentUserType == 'D':
         print('current doctor!')
 
