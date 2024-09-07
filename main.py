@@ -42,11 +42,15 @@ def signin(currentUserType):
             #check if it already exists in patients table.
             c.execute('select * FROM patients')
             patients_data = c.fetchall()
-            for patient_data in patients_data:
+            ''' for patient_data in patients_data:
                 if patient_data[0] == patient_id:
                     print(f"{patient_id} already exists, with name {patient_data[1]}")
-                    return
-            
+                    return'''
+            if zampy.check_record_exists(patient_id, 0, patients_data):
+                print("User already exists!\nRunning login...")
+            else:
+                print("User doesnt exist! making new record...")
+            #doesnt exist, make a new record.
         elif useridentify == 2:
             print("Running log in!")
     elif currentUserType == 'D':
