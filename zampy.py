@@ -242,3 +242,7 @@ def check_record_exists(checkingParameter, indexInRecord, tableData) -> tuple:
         if record[indexInRecord] == checkingParameter:
             return True, record
     return False, None
+
+def checkEmpty(iterable) -> bool:
+    return True if len(iterable) == 0 else False
+

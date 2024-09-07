@@ -164,9 +164,32 @@ def viewRecordDetails(patientID ,recordID = None, doctorID = None, all = False):
         c.execute(f"select * from medicalhistory where patientID = '{patientID}'")
         return c.fetchall()
 
+def add_value_to_table(tableName, columnNames, values):
+    c.execute(f"insert into {tableName} {columnNames} values ({(('%s,'*(len(values) - 1)) + '%s')})", values)
+    database.commit()
+
+
+def makeAppointment(patientID, doctorID, appointmentDate, appointmentReason):
+    if patientID and doctorID and appointmentDate and appointmentReason:
+        appointmentID = ""
+        #fetch existing appointments
+        c.execute("select * from appointments")
+        data = c.fetchall()
+        
+        if zampy.checkEmpty(data):
+            appointmentID = "A1"
+        else:
+            appointmentID = f"A{int(data[-1][0][1]) + 1}"
+        
+        #c.execute(f"insert into appointments (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, status) values (%s, %s, %s, %s, %s, %s)", (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"))
+        add_value_to_table('appointments', "(appointmentID, patientID, doctorID, appointmentDate, appointmentReason, status)", (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"))
+
+
+
 start_program()
 
-all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View all prescriptions', 'Access medical history of a patient'] #also update own info, group doctors by specialization, view pending appointments
+
+all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient'] #also update own info, group doctors by specialization, view pending appointments
 options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View all prescriptions']
 options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
 #Doctor's/Patients Panel
@@ -189,9 +212,17 @@ while True:
             print("Requested data:", data)
         elif index == 2:
             #Make an appointment
-            print(action)
+            doctorID = input("Enter doctor ID to make appointment to: ")
+            appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
+            appointmentReasonIndex = int(input(zampy.make_menu_from_options(['Check-up', 'Surgery'])))
+            if appointmentReasonIndex == 1:
+                appointmentReason = "Check-up"
+            elif appointmentReasonIndex == 2:
+                appointmentReason = "Surgery"
+            
+            makeAppointment(current_user_data[0], doctorID, appointmentDate, appointmentReason)
         elif index == 3:
-            historyOptions = ['Access using recordID', 'Access all records by specific doctor (doctorID)', 'Access all history']
+            historyOptions = ['Access using recordID', 'Access your records by specific doctor (doctorID)', 'Access your history'] #add more options here
             historyIndex = int(input(zampy.make_menu_from_options(historyOptions)))
             if historyIndex == 1:
                 recordID = (input("Enter recordID: "))
@@ -205,10 +236,12 @@ while True:
                 data = viewRecordDetails(current_user_data[0], all=True)
                 print(data)
         elif index == 4:
-            data = viewPrescriptions()
+            data = viewPrescriptions(all=True) #expand to finding by name, and id
             print(data)
         elif index == 5:
             #Access medical history of a patient
-            print(action)
+            patientID = input("Enter patient ID: ").upper()
+            data = viewRecordDetails(patientID=patientID)
+            print(data)
         else:
             print("Something went wrong.")
