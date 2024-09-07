@@ -11,10 +11,9 @@ Columns:
 This will store information about doctors working in the facility.
 Columns:
     doctor_id (Primary Key, INT, AUTO_INCREMENT): Unique identifier for each doctor.
-    first_name (VARCHAR): Doctor's name.
+    name (VARCHAR): Doctor's name.
     specialization (VARCHAR): Doctor’s area of expertise (e.g., cardiology, pediatrics).
     phone_number (VARCHAR): Doctor's contact number.
-    years_of_experience (INT): Number of years of experience.
     consultation_fee (DECIMAL): Doctor's consultation fee.
 
 3. Appointments Table
