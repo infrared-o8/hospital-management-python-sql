@@ -3,8 +3,10 @@ from datetime import datetime
 import zampy
 from prettytable import PrettyTable, from_db_cursor
 import pickle
-import os
-from pathlib import Path
+import bcrypt
+import pyfiglet
+'''import os
+from pathlib import Path'''
 
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
@@ -79,7 +81,7 @@ def make_new_record(ordered_table, name, usertype):
             bfile = open("login_file.dat", "wb")
             pickle.dump([current_user_type, current_user_data], bfile)
         elif usertype == "D":
-            new_doctor_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}", name)
+            new_doctor_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}".upper(), name)
 
             c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
             database.commit()
@@ -260,7 +262,8 @@ while True:
         elif index == 2:
             #Make an appointment
             doctorID = input("Enter doctor ID to make appointment to: ")
-            appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
+            #appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
+            appointmentDate = zampy.choose_date()
             appointmentReasonIndex = int(input(zampy.make_menu_from_options(['Check-up', 'Surgery'])))
             if appointmentReasonIndex == 1:
                 appointmentReason = "Check-up"
@@ -295,13 +298,14 @@ while True:
             options = ['Upcoming appointments', 'Completed appointments']
             index = int(input(zampy.make_menu_from_options(options)))
             if index == 1:
-                c.execute(f"select * from appointments where doctorID = '{current_user_data[0]}' AND status = \'Scheduled\'")
+                c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Scheduled'))
                 data = c.fetchall()
                 print(data)
-                #print(from_db_cursor(c))
+                # print(from_db_cursor(c))
             elif index == 2:
-                c.execute(f"select * from appointments where doctorID = '{current_user_data[0]}' AND status = \'Completed\'")
+                c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Completed'))
                 data = c.fetchall()
-                #print(from_db_cursor(c))
+                print(data)
+                # print(from_db_cursor(c))
         else:
             print("Something went wrong.")

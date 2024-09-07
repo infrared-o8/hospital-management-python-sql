@@ -1,5 +1,9 @@
 import pickle as p
 import random as r
+import tkinter as tk
+from tkinter import ttk
+from tkcalendar import Calendar
+from tkinter import simpledialog
 
 names = [
 "Arbor",
@@ -246,3 +250,46 @@ def check_record_exists(checkingParameter, indexInRecord, tableData) -> tuple:
 def checkEmpty(iterable) -> bool:
     return True if len(iterable) == 0 else False
 
+def choose_date():
+    """Open a graphical popup to select a date. Returns date in 'YYYY-MM-DD' format."""
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+
+    # Create a new window for the calendar
+    top = tk.Toplevel(root)
+    top.title("Choose Date")
+    
+    cal = Calendar(top, selectmode='day', date_pattern='y-mm-dd')
+    cal.pack(padx=10, pady=10)
+
+    def on_date_selected():
+        selected_date = cal.get_date()  # Get selected date in 'YYYY-MM-DD'
+        top.destroy()  # Close the date picker window
+        root.quit()  # Quit the mainloop
+        return selected_date
+
+    ttk.Button(top, text="Select Date", command=on_date_selected).pack(pady=10)
+    
+    root.mainloop()
+    return cal.get_date()
+
+def choose_time():
+    """Open a graphical popup to input time. Returns time in 'HOURS:MINUTES:SECONDS' format."""
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+    
+    # Get user input for hours, minutes, and seconds
+    hours = simpledialog.askstring("Input Time", "Enter hours (HH):", parent=root)
+    minutes = simpledialog.askstring("Input Time", "Enter minutes (MM):", parent=root)
+    seconds = simpledialog.askstring("Input Time", "Enter seconds (SS, optional):", parent=root)
+
+    # Validate the inputs and format the time
+    if hours is None or minutes is None:
+        return None
+    if seconds is None or seconds == "":
+        time_str = f"{hours.zfill(2)}:{minutes.zfill(2)}"
+    else:
+        time_str = f"{hours.zfill(2)}:{minutes.zfill(2)}:{seconds.zfill(2)}"
+    
+    root.quit()
+    return time_str
