@@ -221,3 +221,9 @@ def random_genre() -> str:
     Returns a random genre.
     '''
     return r.choice(genres)
+
+def make_menu_from_options(options: list) -> str:
+    final = ""
+    for index in range(1, len(options) + 1):
+        final += f"{index}: {options[index - 1]}\n"
+    return final
