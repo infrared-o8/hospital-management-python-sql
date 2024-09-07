@@ -222,7 +222,7 @@ def random_genre() -> str:
     '''
     return r.choice(genres)
 
-def make_menu_from_options(options: list, dictVersion = False) -> str:
+def make_menu_from_options(options: list = ['Yes', 'No'], dictVersion = False) -> str:
     final = ""
     dictv = dict()
     while None in options:

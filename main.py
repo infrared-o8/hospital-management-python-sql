@@ -1,6 +1,10 @@
 import mysql.connector
 from datetime import datetime
 import zampy
+from prettytable import PrettyTable, from_db_cursor
+import pickle
+import os
+from pathlib import Path
 
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
@@ -8,29 +12,58 @@ c = database.cursor()
 current_user_type = None
 current_user_data = None
 
+'''# Define the path to the local directory
+directory = Path.home() / "HospitalManagement-PythonSQL"  # This creates a folder in the user's home directory
+
+# Create the directory if it doesn't exist
+os.makedirs(directory, exist_ok=True)
+
+# Define the login file path
+login_file = directory / "creds.dat"'''
 
 def start_program():
     global current_user_type
+    global current_user_data
+
     try:
-        print("Using as patient/doctor?\n")
-        user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor'])))
-        if user == 1:
-            #logging in as patient
-            current_user_type = 'P'
-        elif user == 2:
-            #logging in as doctor
-            current_user_type = 'D'
-        else:
-            print("Something went wrong. Try again...\n")
-            start_program()
-    except ValueError:
-        print("Input was of incorrect datatype. Try again...\n")
-        start_program()
-    else:
+        bfile = open("login_file.dat", "rb")
+    except Exception as e:
+        print("Some error occured while trying to find existing login-file:", e)
+        print("Proceeding to normal login...")
         attain_creds(current_user_type)
+    else:
+        bfilecontents = pickle.load(bfile)
+        print("Found an existing login file:", bfilecontents, "\nConfirm login with these credentials?")
+        confirmLogin = int(input(zampy.make_menu_from_options()))
+        if confirmLogin == 1:
+            current_user_type = bfilecontents[0]
+            current_user_data = bfilecontents[1]
+            print("Succesfully logged in as", current_user_data[1])
+        else:
+            #attain_creds(current_user_type)
+            try:
+                print("Using as patient/doctor?\n")
+                user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor'])))
+                if user == 1:
+                    #logging in as patient
+                    current_user_type = 'P'
+                elif user == 2:
+                    #logging in as doctor
+                    current_user_type = 'D'
+                else:
+                    print("Something went wrong. Try again...\n")
+                    start_program()
+            except ValueError:
+                print("Input was of incorrect datatype. Try again...\n")
+                start_program()
+            else:
+                attain_creds(current_user_type)
+
+
 
 def make_new_record(ordered_table, name, usertype):
         global current_user_data
+        global current_user_type
         if usertype == "P":
             new_patient_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}", name)
 
@@ -43,6 +76,8 @@ def make_new_record(ordered_table, name, usertype):
 
             c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
             current_user_data = c.fetchone()
+            bfile = open("login_file.dat", "wb")
+            pickle.dump([current_user_type, current_user_data], bfile)
         elif usertype == "D":
             new_doctor_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}", name)
 
@@ -55,6 +90,8 @@ def make_new_record(ordered_table, name, usertype):
 
             c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
             current_user_data = c.fetchone()
+            bfile = open("login_file.dat", "wb")
+            pickle.dump([current_user_type, current_user_data], bfile)
 
 def signup(user_type):
     global current_user_data
@@ -96,6 +133,7 @@ def signup(user_type):
 
 def login(user_type):
     global current_user_data
+    global current_user_type
     if user_type == "P":
         requested_id = (input("Enter patient ID: "))
         c.execute(f"select * from patients where patientid = '{requested_id}'")
@@ -107,6 +145,10 @@ def login(user_type):
         else:
             print(f"Succesfully retrieved patient data: {record}")
             current_user_data = record
+
+            bfile = open("login_file.dat", "wb")
+            pickle.dump([current_user_type, current_user_data], bfile)
+
     elif user_type == "D":
         requested_id = (input("Enter doctor ID: "))
         c.execute(f"select * from doctors where doctorid = '{requested_id}'")
@@ -118,6 +160,10 @@ def login(user_type):
         else:
             print(f"Succesfully retrieved doctor data: {record}")
             current_user_data = record
+
+            bfile = open("login_file.dat", "wb")
+            pickle.dump([current_user_type, current_user_data], bfile)
+
 
 def attain_creds(currentUserType):
     if currentUserType == 'P':
@@ -169,6 +215,7 @@ def add_value_to_table(tableName, columnNames, values):
     database.commit()
 
 
+
 def makeAppointment(patientID, doctorID, appointmentDate, appointmentReason):
     if patientID and doctorID and appointmentDate and appointmentReason:
         appointmentID = ""
@@ -189,8 +236,8 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentReason):
 start_program()
 
 
-all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient'] #also update own info, group doctors by specialization, view pending appointments
-options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View all prescriptions']
+all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments history'] #also update own info, group doctors by specialization, view pending appointments
+options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View all prescriptions', 'Access appointments history' if current_user_type == "D" else None]
 options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
 #Doctor's/Patients Panel
 while True:
@@ -243,5 +290,18 @@ while True:
             patientID = input("Enter patient ID: ").upper()
             data = viewRecordDetails(patientID=patientID)
             print(data)
+        elif index == 6:
+            #Access appointments history
+            options = ['Upcoming appointments', 'Completed appointments']
+            index = int(input(zampy.make_menu_from_options(options)))
+            if index == 1:
+                c.execute(f"select * from appointments where doctorID = '{current_user_data[0]}' AND status = \'Scheduled\'")
+                data = c.fetchall()
+                print(data)
+                #print(from_db_cursor(c))
+            elif index == 2:
+                c.execute(f"select * from appointments where doctorID = '{current_user_data[0]}' AND status = \'Completed\'")
+                data = c.fetchall()
+                #print(from_db_cursor(c))
         else:
             print("Something went wrong.")
