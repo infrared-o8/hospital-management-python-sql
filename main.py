@@ -7,6 +7,7 @@ import bcrypt
 import pyfiglet
 import os
 from pathlib import Path
+import getpass
 
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
@@ -24,7 +25,8 @@ os.makedirs(directory, exist_ok=True)
 login_file = directory / "creds.dat"
 
 def checkPasswords(correct_password: str, name: str = "current user", usebcrypt = False) -> bool:
-    inpPassword = input(f"Enter password for {name}: ")
+    print(f"Enter password for {name}: ")
+    inpPassword = getpass.getpass()
     if usebcrypt:
         if bcrypt.checkpw(inpPassword.encode('utf-8'), correct_password):
             return True
@@ -121,7 +123,8 @@ def make_new_record(ordered_table, name, usertype):
             new_patient_data = [new_patient_id, name]
             #print(new_patient_id)
             #c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
-            new_p = input("Type a new password:")
+            print("Type a new ", end="")
+            new_p = getpass.getpass()
             new_p_bytes = new_p.encode('utf-8')
             add_value_to_table("credentials", ['userid', 'password'], [new_patient_id, new_p])
             add_value_to_table("patients", ['PatientID', 'Name'], new_patient_data)
@@ -147,7 +150,8 @@ def make_new_record(ordered_table, name, usertype):
 
             #c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
             #database.commit()
-            new_p = input("Type a new password:")
+            print("Type a new ", end="")
+            new_p = getpass.getpass()
             new_p_bytes = new_p.encode('utf-8')
             add_value_to_table("credentials", ['userid', 'password'], [new_doctor_id, new_p])
             add_value_to_table("doctors", ['DoctorID', 'Name'], new_doctor_data)
