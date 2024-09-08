@@ -83,27 +83,37 @@ def make_new_record(ordered_table, name, usertype):
         global current_user_data
         global current_user_type
         if usertype == "P":
-            new_patient_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}", name)
+            new_patient_data = [f"{usertype}{int(ordered_table[-1][0][1]) + 1}", name]
 
-            c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
-            database.commit()
+            #c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
+            add_value_to_table("patients", ['PatientID', 'Name'], new_patient_data)
+            #database.commit()
 
-            c.execute("select * from patients")
-            confirm_data = c.fetchall()
+            #c.execute("select * from patients")
+            #confirm_data = c.fetchall()
+
+            confirm_data = retreiveData('patients', allColumns=True)
+
             print("Updated patients table\n", confirm_data)
 
-            c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
-            current_user_data = c.fetchone()
+            #c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
+            #current_user_data = c.fetchone()
+
+            current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]])
+
             bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data], bfile)
         elif usertype == "D":
-            new_doctor_data = (f"{usertype}{int(ordered_table[-1][0][1]) + 1}".upper(), name)
+            new_doctor_data = [f"{usertype}{int(ordered_table[-1][0][1]) + 1}".upper(), name]
 
-            c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
-            database.commit()
+            #c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
+            #database.commit()
+            add_value_to_table("patients", ['DoctorID', 'Name'], new_doctor_data)
 
-            c.execute("select * from doctors")
-            confirm_data = c.fetchall()
+            #c.execute("select * from doctors")
+            #confirm_data = c.fetchall()
+
+            confirm_data = retreiveData('doctors', all=True)
             print("Updated doctors table\n", confirm_data)
 
             c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
@@ -231,15 +241,25 @@ def viewRecordDetails(patientID ,recordID = None, doctorID = None, all = False):
         #return c.fetchall()
         return retreiveData("medicalhistory", True, conditionNames=['patientID'], conditionValues=[patientID])
 
-def add_value_to_table(tableName, columnNames, values):
-    c.execute(f"insert into {tableName} {columnNames} values ({(('%s,'*(len(values) - 1)) + '%s')})", values)
+def add_value_to_table(tableName, columnNames: list, values: list):
+    #c.execute(f"insert into {tableName} {columnNames} values ({(('%s,'*(len(values) - 1)) + '%s')})", values)
+    command = "insert into"
+    if tableName:
+        command += f" {tableName}"
+        if columnNames:
+            command += f" ({','.join(columnNames)})"
+            if values:
+                command += f" values ({(('%s,'*(len(values) - 1)) + '%s')})"
+    c.execute(command, values)
     database.commit()
 
-def retreiveData(tableName, all=False, columnNames = None, conditionNames = None, conditionValues = None):
+def retreiveData(tableName: str, allColumns:bool =False, columnNames: list = None, conditionNames: list = None, conditionValues: list = None):
     '''Assumes all conditions to be seperated by AND for now.'''
     command = "select"
+    if columnNames == None:
+        allColumns = True
     if tableName:
-        if not all:
+        if not allColumns:
             if columnNames:
                 command += f" {','.join(columnNames)}"
         else:
@@ -267,7 +287,7 @@ def retreiveData(tableName, all=False, columnNames = None, conditionNames = None
         print("Error while trying to retrieve data:", e)
         return None
     else:
-        if all:
+        if allColumns:
             data = c.fetchall()
         else:
             data = c.fetchone()
@@ -286,7 +306,7 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentReason):
             appointmentID = f"A{int(data[-1][0][1]) + 1}"
         
         #c.execute(f"insert into appointments (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, status) values (%s, %s, %s, %s, %s, %s)", (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"))
-        add_value_to_table('appointments', "(appointmentID, patientID, doctorID, appointmentDate, appointmentReason, status)", (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"))
+        add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"])
 
 
 
