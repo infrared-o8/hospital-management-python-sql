@@ -131,12 +131,15 @@ def signup(user_type):
     if user_type == "P":
         patient_name = input("Enter patient name: ")
         #check if it already exists in patients table.
-        c.execute('select * FROM patients ORDER BY PatientID')
+        c.execute('select * FROM patients ORDER BY PatientID') ##orderby functionality here!
         ordered_patient_table = c.fetchall()
+
+        #ordered_patient_table = retreiveData("patients", )
+
         (pExists, patient_record) = zampy.check_record_exists(patient_name, 1, ordered_patient_table)
         if pExists:
             print(f"Username already exists with patient data: {patient_record}!") #add column names - !!
-            confirm = input("Do you confirm this is your data? (Y/N): ")
+            confirm = input("Do you confirm this is your data? (Y/N): ") #add password protection here
             if confirm in 'Yy':
                 current_user_data = patient_record
             else:
@@ -148,7 +151,7 @@ def signup(user_type):
     elif user_type == "D":
         doctor_name = input("Enter doctor name: ")
         #check if it already exists in doctors table.
-        c.execute('select * FROM doctors ORDER BY DoctorID')
+        c.execute('select * FROM doctors ORDER BY DoctorID') ##orderby functionality here!
         ordered_doctor_table = c.fetchall()
         (dExists, doctor_record) = zampy.check_record_exists(doctor_name, 1, ordered_doctor_table)
         if dExists:
@@ -168,8 +171,11 @@ def login(user_type):
     global current_user_type
     if user_type == "P":
         requested_id = (input("Enter patient ID: "))
-        c.execute(f"select * from patients where patientid = '{requested_id}'")
-        record = c.fetchone()
+        #c.execute(f"select * from patients where patientid = '{requested_id}'")
+        #record = c.fetchone()
+
+        record = retreiveData("patients", conditionNames=['patientID'], conditionValues=[requested_id], returnAllData=False)
+
         if record is None:
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
@@ -183,8 +189,12 @@ def login(user_type):
 
     elif user_type == "D":
         requested_id = (input("Enter doctor ID: "))
-        c.execute(f"select * from doctors where doctorid = '{requested_id}'")
-        record = c.fetchone()
+        #c.execute(f"select * from doctors where doctorid = '{requested_id}'")
+        #record = c.fetchone()
+
+        record = retreiveData("doctors", conditionNames=['doctorID'], conditionValues=[requested_id], returnAllData=False)
+
+
         if record is None:
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
@@ -216,20 +226,26 @@ def attain_creds(currentUserType):
             login(current_user_type)
 
 def viewPatientDetails(patientID):
-    c.execute(f"select * from patients where PatientID = '{patientID}'")
-    return c.fetchone()
+    #c.execute(f"select * from patients where PatientID = '{patientID}'")
+    #return c.fetchone()
+    return retreiveData("patients", conditionNames=['patientID'], conditionValues=[patientID], returnAllData=False)
 
 def viewDoctorDetails(doctorID):
-    c.execute(f"select * from doctors where doctorID = '{doctorID}'")
-    return c.fetchone()
+    #c.execute(f"select * from doctors where doctorID = '{doctorID}'")
+    #return c.fetchone()
+    return retreiveData("doctors", conditionNames=['doctorID'], conditionValues=[doctorID], returnAllData=False)
+    
 
 def viewPrescriptions(pID = None, all = True):
     if all:
-        c.execute("select * from prescriptions")
-        return c.fetchall()
+        #c.execute("select * from prescriptions")
+        #return c.fetchall()
+
+        return retreiveData("prescriptions", allColumns=True)
     else:
         if pID:
-            c.execute(f"select * from prescriptions where prescriptionID = '{pID}'")
+            #c.execute(f"select * from prescriptions where prescriptionID = '{pID}'")
+            return retreiveData("prescriptions", True, returnAllData=False)
 
 def viewRecordDetails(patientID ,recordID = None, doctorID = None, all = False):
     if recordID:
@@ -366,8 +382,12 @@ while True:
                 data = viewRecordDetails(current_patient_id, all=True)
                 print(data)
         elif index == 4:
-            data = viewPrescriptions(all=True) #expand to finding by name, and id
-            print(data)
+            idOrAll = int(input(zampy.make_menu_from_options(['View all prescriptions', 'View by ID'])))
+            if idOrAll == 1:
+                data = viewPrescriptions(all=True) #expand to finding by name, and id
+                print(data)
+            elif idOrAll == 2:
+                data = viewPrescriptions(all=False, pID=input("Enter prescription ID: "))
         elif index == 5:
             #Access medical history of a patient
             patientID = input("Enter patient ID: ").upper()
