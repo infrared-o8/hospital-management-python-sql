@@ -273,7 +273,7 @@ def add_value_to_table(tableName, columnNames: list, values: list):
     c.execute(command, values)
     database.commit()
 
-def retreiveData(tableName: str, allColumns:bool =False, columnNames: list = None, conditionNames: list = None, conditionValues: list = None, returnAllData:bool = True):
+def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = None, conditionNames: list = None, conditionValues: list = None, returnAllData:bool = True):
     '''Assumes all conditions to be seperated by AND for now.'''
     command = "select"
     if columnNames == None:
@@ -299,6 +299,7 @@ def retreiveData(tableName: str, allColumns:bool =False, columnNames: list = Non
         command += ";"
     else:
         print("Received no tableName.")
+        #return None
     print("Final commmand:", command)
 
     try:
@@ -317,9 +318,11 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentReason):
     if patientID and doctorID and appointmentDate and appointmentReason:
         appointmentID = ""
         #fetch existing appointments
-        c.execute("select * from appointments")
-        data = c.fetchall()
+        #c.execute("select * from appointments")
+        #data = c.fetchall()
         
+        data = retreiveData('appointments')
+
         if zampy.checkEmpty(data):
             appointmentID = "A1"
         else:
@@ -359,12 +362,15 @@ while True:
             doctorID = input("Enter doctor ID to make appointment to: ")
             #appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
             appointmentDate = zampy.choose_date()
-            appointmentReasonIndex = int(input(zampy.make_menu_from_options(['Check-up', 'Surgery'])))
+            appointmentReasonIndex = int(input(zampy.make_menu_from_options(['Check-up', 'Surgery', 'Physical Exam', 'Health Assessment'])))
             if appointmentReasonIndex == 1:
                 appointmentReason = "Check-up"
             elif appointmentReasonIndex == 2:
                 appointmentReason = "Surgery"
-            
+            elif appointmentReasonIndex == 3:
+                appointmentReason = 'Physical Exam'
+            elif appointmentReasonIndex == 4:
+                appointmentReason = 'Health Assessment'
             makeAppointment(current_user_data[0], doctorID, appointmentDate, appointmentReason)
         elif index == 3:
             historyOptions = ['Access using recordID', 'Access your records by specific doctor (doctorID)', 'Access your history'] #add more options here
