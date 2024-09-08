@@ -35,6 +35,19 @@ def checkPasswords(correct_password: str, name: str = "current user", usebcrypt 
 
 def incorrectPassword():
     print("incorrect password!")
+    #do something more here!
+def incrementNumericPart(text):
+    number = int(text[1:]) + 1
+    return text[0] + str(number)
+
+def getHighestID(ordered_table):
+    highestNum = 0
+    #highestID = None
+    for record in ordered_table:
+        currentNum = int(record[0][1:])
+        if currentNum > highestNum:
+            highestNum = currentNum
+    return ordered_table[0][0][0] + str(highestNum)  
 
 def start_program():
     global current_user_type
@@ -103,9 +116,10 @@ def make_new_record(ordered_table, name, usertype):
         global current_user_data
         global current_user_type
         if usertype == "P":
-            new_patient_id = f"{usertype}{int(ordered_table[-1][0][1]) + 1}"
+            #new_patient_id = f"{usertype}{int(ordered_table[-1][0][1]) + 1}" #update thisss
+            new_patient_id = f"{incrementNumericPart(getHighestID(ordered_table))}" 
             new_patient_data = [new_patient_id, name]
-
+            #print(new_patient_id)
             #c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
             new_p = input("Type a new password:")
             new_p_bytes = new_p.encode('utf-8')
@@ -128,12 +142,13 @@ def make_new_record(ordered_table, name, usertype):
             bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
         elif usertype == "D":
-            new_doctor_id = f"{usertype}{int(ordered_table[-1][0][1]) + 1}"
-            new_doctor_data = [f"{usertype}{int(ordered_table[-1][0][1]) + 1}".upper(), name]
+            new_doctor_id = f"{incrementNumericPart(getHighestID(ordered_table))}"
+            new_doctor_data = [new_doctor_id, name]
 
             #c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
             #database.commit()
             new_p = input("Type a new password:")
+            new_p_bytes = new_p.encode('utf-8')
             add_value_to_table("credentials", ['userid', 'password'], [new_doctor_id, new_p])
             add_value_to_table("doctors", ['DoctorID', 'Name'], new_doctor_data)
 
@@ -146,7 +161,7 @@ def make_new_record(ordered_table, name, usertype):
             #c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
             #current_user_data = c.fetchone()
 
-            current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]], returnAllData=False)
+            current_user_data = retreiveData("doctors", allColumns=True, conditionNames=['DoctorID'], conditionValues=[new_doctor_data[0]], returnAllData=False)
 
 
             bfile = open(login_file, "wb")
@@ -224,7 +239,7 @@ def login(user_type):
         if record is None:
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
-                signup()
+                signup(user_type)
         else:
             cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
             cpassword = cpassword[0]
@@ -249,7 +264,7 @@ def login(user_type):
         if record is None:
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
-                signup()
+                signup(user_type)
         else:
             cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
             cpassword = cpassword[0]
