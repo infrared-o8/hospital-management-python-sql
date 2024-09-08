@@ -219,20 +219,59 @@ def viewPrescriptions(pID = None, all = True):
 
 def viewRecordDetails(patientID ,recordID = None, doctorID = None, all = False):
     if recordID:
-        c.execute(f"select * from medicalhistory where recordID = '{recordID}' AND patientID = '{patientID}'")
-        return c.fetchone()
+        #c.execute(f"select * from medicalhistory where recordID = '{recordID}' AND patientID = '{patientID}'")
+        #return c.fetchone()
+        return retreiveData("medicalhistory", True, conditionNames=['recordID', 'patientID'], conditionValues=[recordID, patientID])
     if doctorID:
-        c.execute(f"select * from medicalhistory where doctor = '{doctorID}' AND patientID = '{patientID}'")
-        return c.fetchall()
+        #c.execute(f"select * from medicalhistory where doctorID = '{doctorID}' AND patientID = '{patientID}'")
+        #return c.fetchall()
+        return retreiveData("medicalhistory", True, conditionNames=['doctorID', 'patientID'], conditionValues=[doctorID, patientID])
     if all:
-        c.execute(f"select * from medicalhistory where patientID = '{patientID}'")
-        return c.fetchall()
+        #c.execute(f"select * from medicalhistory where patientID = '{patientID}'")
+        #return c.fetchall()
+        return retreiveData("medicalhistory", True, conditionNames=['patientID'], conditionValues=[patientID])
 
 def add_value_to_table(tableName, columnNames, values):
     c.execute(f"insert into {tableName} {columnNames} values ({(('%s,'*(len(values) - 1)) + '%s')})", values)
     database.commit()
 
+def retreiveData(tableName, all=False, columnNames = None, conditionNames = None, conditionValues = None):
+    '''Assumes all conditions to be seperated by AND for now.'''
+    command = "select"
+    if tableName:
+        if not all:
+            if columnNames:
+                command += f" {','.join(columnNames)}"
+        else:
+            command += " *"
+        command += f" from {tableName}"
+        if conditionNames and conditionValues:
+            command += " where"
+            for conditionIndex in range(1, len(conditionNames) + 1):
+                currentValue = conditionValues[conditionIndex - 1]
+                if type(currentValue) is str:
+                    command += f" {conditionNames[conditionIndex - 1]} = '{currentValue}'"
+                elif type(currentValue) is int:
+                    command += f" {conditionNames[conditionIndex - 1]} = {currentValue}"
+                if conditionIndex == len(conditionNames):
+                    continue
+                command += " AND"
+        command += ";"
+    else:
+        print("Received no tableName.")
+    print("Final commmand:", command)
 
+    try:
+        c.execute(command)
+    except Exception as e:
+        print("Error while trying to retrieve data:", e)
+        return None
+    else:
+        if all:
+            data = c.fetchall()
+        else:
+            data = c.fetchone()
+        return data
 
 def makeAppointment(patientID, doctorID, appointmentDate, appointmentReason):
     if patientID and doctorID and appointmentDate and appointmentReason:
