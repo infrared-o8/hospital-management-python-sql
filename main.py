@@ -99,7 +99,7 @@ def make_new_record(ordered_table, name, usertype):
             #c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
             #current_user_data = c.fetchone()
 
-            current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]])
+            current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]], returnAllData=False)
 
             bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data], bfile)
@@ -116,8 +116,12 @@ def make_new_record(ordered_table, name, usertype):
             confirm_data = retreiveData('doctors', all=True)
             print("Updated doctors table\n", confirm_data)
 
-            c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
-            current_user_data = c.fetchone()
+            #c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
+            #current_user_data = c.fetchone()
+
+            current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]], returnAllData=False)
+
+
             bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data], bfile)
 
@@ -253,7 +257,7 @@ def add_value_to_table(tableName, columnNames: list, values: list):
     c.execute(command, values)
     database.commit()
 
-def retreiveData(tableName: str, allColumns:bool =False, columnNames: list = None, conditionNames: list = None, conditionValues: list = None):
+def retreiveData(tableName: str, allColumns:bool =False, columnNames: list = None, conditionNames: list = None, conditionValues: list = None, returnAllData:bool = True):
     '''Assumes all conditions to be seperated by AND for now.'''
     command = "select"
     if columnNames == None:
@@ -287,7 +291,7 @@ def retreiveData(tableName: str, allColumns:bool =False, columnNames: list = Non
         print("Error while trying to retrieve data:", e)
         return None
     else:
-        if allColumns:
+        if returnAllData:
             data = c.fetchall()
         else:
             data = c.fetchone()
