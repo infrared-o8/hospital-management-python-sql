@@ -290,16 +290,17 @@ while True:
         elif index == 3:
             historyOptions = ['Access using recordID', 'Access your records by specific doctor (doctorID)', 'Access your history'] #add more options here
             historyIndex = int(input(zampy.make_menu_from_options(historyOptions)))
+            current_patient_id = current_user_data[0]
             if historyIndex == 1:
                 recordID = (input("Enter recordID: "))
-                data = viewRecordDetails(recordID=recordID)
+                data = viewRecordDetails(current_patient_id, recordID=recordID)
                 print(data)
             elif historyIndex == 2:
                 doctorID = (input("Enter doctor ID: "))
-                data = viewRecordDetails(doctorID=doctorID)
+                data = viewRecordDetails(current_patient_id, doctorID=doctorID)
                 print(data)
             elif historyIndex == 3:
-                data = viewRecordDetails(current_user_data[0], all=True)
+                data = viewRecordDetails(current_patient_id, all=True)
                 print(data)
         elif index == 4:
             data = viewPrescriptions(all=True) #expand to finding by name, and id
