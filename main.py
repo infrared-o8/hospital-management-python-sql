@@ -23,17 +23,34 @@ os.makedirs(directory, exist_ok=True)
 # Define the login file path
 login_file = directory / "creds.dat"
 
+def checkPasswords(correct_password: str, name: str = "current user", usebcrypt = False) -> bool:
+    inpPassword = input(f"Enter password for {name}: ")
+    if usebcrypt:
+        if bcrypt.checkpw(inpPassword.encode('utf-8'), correct_password):
+            return True
+    else:
+        if correct_password == inpPassword:
+            return True
+    return False
+
+def incorrectPassword():
+    print("incorrect password!")
+
 def start_program():
     global current_user_type
     global current_user_data
 
     try:
         bfile = open(login_file, "rb")
+        bfilecontents = pickle.load(bfile)
+        found_user_type = bfilecontents[0]
+        found_user_data = bfilecontents[1]
+        found_user_password = bfilecontents[2]
     except Exception as e:
-        print("Some error occured while trying to find existing login-file:", e)
+        print("Some error occured while trying to access existing login-file:", e)
         print("Proceeding to normal login...")
         try:
-            print("Using as patient/doctor?\n")
+            print("Using as:\n")
             user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor'])))
             if user == 1:
                 #logging in as patient
@@ -50,15 +67,18 @@ def start_program():
         else:
             attain_creds(current_user_type)
     else:
-        bfilecontents = pickle.load(bfile)
-        print("Found an existing login file:", bfilecontents, "\nConfirm login with these credentials?")
+        name = bfilecontents[1][1]
+        print("Found an existing login file for", name, "\nConfirm login with these credentials?")
         confirmLogin = int(input(zampy.make_menu_from_options()))
         if confirmLogin == 1:
-            current_user_type = bfilecontents[0]
-            current_user_data = bfilecontents[1]
-            print("Succesfully logged in as", current_user_data[1])
+            #print("found)user_password", found_user_password)
+            if checkPasswords(found_user_password, name, usebcrypt=True):
+                current_user_type = bfilecontents[0]
+                current_user_data = bfilecontents[1]
+                print("Succesfully logged in as", current_user_data[1])
+            else:
+                incorrectPassword()
         else:
-            #attain_creds(current_user_type)
             try:
                 print("Using as patient/doctor?\n")
                 user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor'])))
@@ -83,9 +103,13 @@ def make_new_record(ordered_table, name, usertype):
         global current_user_data
         global current_user_type
         if usertype == "P":
-            new_patient_data = [f"{usertype}{int(ordered_table[-1][0][1]) + 1}", name]
+            new_patient_id = f"{usertype}{int(ordered_table[-1][0][1]) + 1}"
+            new_patient_data = [new_patient_id, name]
 
             #c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
+            new_p = input("Type a new password:")
+            new_p_bytes = new_p.encode('utf-8')
+            add_value_to_table("credentials", ['userid', 'password'], [new_patient_id, new_p])
             add_value_to_table("patients", ['PatientID', 'Name'], new_patient_data)
             #database.commit()
 
@@ -102,13 +126,16 @@ def make_new_record(ordered_table, name, usertype):
             current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]], returnAllData=False)
 
             bfile = open(login_file, "wb")
-            pickle.dump([current_user_type, current_user_data], bfile)
+            pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
         elif usertype == "D":
+            new_doctor_id = f"{usertype}{int(ordered_table[-1][0][1]) + 1}"
             new_doctor_data = [f"{usertype}{int(ordered_table[-1][0][1]) + 1}".upper(), name]
 
             #c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
             #database.commit()
-            add_value_to_table("patients", ['DoctorID', 'Name'], new_doctor_data)
+            new_p = input("Type a new password:")
+            add_value_to_table("credentials", ['userid', 'password'], [new_doctor_id, new_p])
+            add_value_to_table("doctors", ['DoctorID', 'Name'], new_doctor_data)
 
             #c.execute("select * from doctors")
             #confirm_data = c.fetchall()
@@ -123,7 +150,7 @@ def make_new_record(ordered_table, name, usertype):
 
 
             bfile = open(login_file, "wb")
-            pickle.dump([current_user_type, current_user_data], bfile)
+            pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
 
 def signup(user_type):
     global current_user_data
@@ -141,9 +168,17 @@ def signup(user_type):
             print(f"Username already exists with patient data: {patient_record}!") #add column names - !!
             confirm = input("Do you confirm this is your data? (Y/N): ") #add password protection here
             if confirm in 'Yy':
-                current_user_data = patient_record
+                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[patient_record[0]])
+                password = password[0]
+                if checkPasswords(password.encode('utf-8'), patient_record[1]):
+                    current_user_data = patient_record
+                else:
+                    incorrectPassword()
             else:
-                make_new_record(ordered_patient_table, patient_name, user_type)
+                print("Would you like to create a new account with this name?")
+                choice = int(input(zampy.make_menu_from_options()))
+                if choice == 1:
+                    make_new_record(ordered_patient_table, patient_name, user_type)
         else:
             print("Patient record doesn't exist! Making new record...")
             #doesnt exist, make a new record.
@@ -158,9 +193,17 @@ def signup(user_type):
             print(f"Username already exists with doctor data: {doctor_record}!") #add column names - !!
             confirm = input("Do you confirm this is your data? (Y/N): ")
             if confirm in 'Yy':
-                current_user_data = doctor_record
+                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[patient_record[0]])
+                password = password[0]
+                if checkPasswords(password.encode('utf-8'), doctor_record[1]):
+                    current_user_data = doctor_record
+                else:
+                    incorrectPassword()
             else:
-                make_new_record(ordered_doctor_table, doctor_name, user_type)
+                print("Would you like to create a new account with this name?")
+                choice = int(input(zampy.make_menu_from_options()))
+                if choice == 1:
+                    make_new_record(ordered_doctor_table, doctor_name, user_type)
         else:
             print("Doctor record doesn't exist! Making new record...")
             #doesnt exist, make a new record.
@@ -175,17 +218,25 @@ def login(user_type):
         #record = c.fetchone()
 
         record = retreiveData("patients", conditionNames=['patientID'], conditionValues=[requested_id], returnAllData=False)
+       # if record:
+           # password = input(f"Record found. Enter password for {record[1]}:")
 
         if record is None:
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
                 signup()
         else:
-            print(f"Succesfully retrieved patient data: {record}")
-            current_user_data = record
+            cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
+            cpassword = cpassword[0]
+            cpasswordbytes = cpassword.encode('utf-8')
+            #print("cpassword:", cpassword)
+            if checkPasswords(cpasswordbytes, record[1]):
+                current_user_data = record
 
-            bfile = open(login_file, "wb")
-            pickle.dump([current_user_type, current_user_data], bfile)
+                bfile = open(login_file, "wb")
+                pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
+            else:
+                incorrectPassword()
 
     elif user_type == "D":
         requested_id = (input("Enter doctor ID: "))
@@ -200,11 +251,16 @@ def login(user_type):
             if requSignUp in 'Yy':
                 signup()
         else:
-            print(f"Succesfully retrieved doctor data: {record}")
-            current_user_data = record
+            cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
+            cpassword = cpassword[0]
+            cpasswordbytes = cpassword.encode('utf-8')
+            if checkPasswords(cpasswordbytes, record[1]):
+                current_user_data = record
 
-            bfile = open(login_file, "wb")
-            pickle.dump([current_user_type, current_user_data], bfile)
+                bfile = open(login_file, "wb")
+                pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
+            else:
+                incorrectPassword()
 
 
 def attain_creds(currentUserType):
