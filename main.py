@@ -140,7 +140,7 @@ def make_new_record(ordered_table, name, usertype):
             #c.execute("select * from doctors")
             #confirm_data = c.fetchall()
 
-            confirm_data = retreiveData('doctors', all=True)
+            confirm_data = retreiveData('doctors', allColumns=True)
             print("Updated doctors table\n", confirm_data)
 
             #c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
@@ -168,9 +168,9 @@ def signup(user_type):
             print(f"Username already exists with patient data: {patient_record}!") #add column names - !!
             confirm = input("Do you confirm this is your data? (Y/N): ") #add password protection here
             if confirm in 'Yy':
-                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[patient_record[0]])
+                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[patient_record[0]], returnAllData=False)
                 password = password[0]
-                if checkPasswords(password.encode('utf-8'), patient_record[1]):
+                if checkPasswords(password, patient_record[1]):
                     current_user_data = patient_record
                 else:
                     incorrectPassword()
@@ -193,9 +193,9 @@ def signup(user_type):
             print(f"Username already exists with doctor data: {doctor_record}!") #add column names - !!
             confirm = input("Do you confirm this is your data? (Y/N): ")
             if confirm in 'Yy':
-                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[patient_record[0]])
+                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[doctor_record[0]], returnAllData=False)
                 password = password[0]
-                if checkPasswords(password.encode('utf-8'), doctor_record[1]):
+                if checkPasswords(password, doctor_record[1]):
                     current_user_data = doctor_record
                 else:
                     incorrectPassword()
@@ -230,7 +230,7 @@ def login(user_type):
             cpassword = cpassword[0]
             cpasswordbytes = cpassword.encode('utf-8')
             #print("cpassword:", cpassword)
-            if checkPasswords(cpasswordbytes, record[1]):
+            if checkPasswords(cpassword, record[1]):
                 current_user_data = record
 
                 bfile = open(login_file, "wb")
@@ -254,7 +254,7 @@ def login(user_type):
             cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
             cpassword = cpassword[0]
             cpasswordbytes = cpassword.encode('utf-8')
-            if checkPasswords(cpasswordbytes, record[1]):
+            if checkPasswords(cpassword, record[1]):
                 current_user_data = record
 
                 bfile = open(login_file, "wb")
@@ -397,6 +397,7 @@ options = ['View a patient\'s details' if current_user_type == "D" else None, 'V
 options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
 #Doctor's/Patients Panel
 while True:
+    print('Account:\t', current_user_data)
     print("Enter action: ")
     tempIndex = int(input(options_menu_str))
     action = options_dict[tempIndex]
@@ -453,7 +454,7 @@ while True:
         elif index == 5:
             #Access medical history of a patient
             patientID = input("Enter patient ID: ").upper()
-            data = viewRecordDetails(patientID=patientID)
+            data = viewRecordDetails(patientID=patientID, all=True)
             print(data)
         elif index == 6:
             #Access appointments history
