@@ -71,9 +71,9 @@ def updateAppointments(current_user_type):
     global current_user_data
     if current_user_type == "P":
         #appointmentsPending = retreiveData('appointments', conditionNames=['patientID'], conditionValues=[current_user_data[0]])
-        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and '{date.today().isoformat()}' = appointmentDate")
+        c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate")
         appointmentsPendingToday = c.fetchall()
-        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and '{date.today().isoformat()}' < appointmentDate")
+        c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' < appointmentDate")
         appointmentsPendingLater = c.fetchall()
 
         if len(appointmentsPendingLater) > 0:
@@ -96,7 +96,7 @@ def updateAppointments(current_user_type):
                 else:
                     print(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ")
                     time = zampy.choose_time()
-                    c.execute(f"update appointments set appointmentTime = '{time}' where appointmentID = '{appointment[0]}'")
+                    c.execute(f"update appointments set appointmentTime = '{time}' where LOWER(appointmentID) = '{appointment[0].lower()}'")
                     database.commit()
         else:
             print("You have no appointments upcoming today.")
@@ -149,7 +149,7 @@ def updateAppointments(current_user_type):
                         #log into medical history
                         add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], diagnosis, prescriptionID, 'Completed'])
                         #delete from appointments.
-                        c.execute(f"delete from appointments where appointmentID = '{appointment[0]}'")
+                        c.execute(f"delete from appointments where LOWER(appointmentID) = '{appointment[0].lower()}'")
                         database.commit()
                     else:
                         print("Attempting to make a new prescription...")
@@ -162,7 +162,7 @@ def updateAppointments(current_user_type):
                         #log into medical history, 
                         add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], 'NULL', 'NULL','Cancelled']) 
                         #delete from appointments.
-                        c.execute(f"delete from appointments where appointmentID = '{appointment[0]}'")
+                        c.execute(f"delete from appointments where LOWER(appointmentID) = '{appointment[0].lower()}'")
                         database.commit()
                     #delay mechanism?
                     
@@ -596,7 +596,7 @@ while True:
                 data = viewPrescriptions(all=False, pID=input("Enter prescription ID: "))
         elif index == 5:
             #Access medical history of a patient
-            patientID = input("Enter patient ID: ").upper()
+            patientID = input("Enter patient ID: ")
             data = viewRecordDetails(patientID=patientID, all=True)
             print(data)
         elif index == 6:
