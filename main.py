@@ -56,8 +56,14 @@ def updateAppointments(current_user_type):
     global current_user_data
     if current_user_type == "P":
         #appointmentsPending = retreiveData('appointments', conditionNames=['patientID'], conditionValues=[current_user_data[0]])
-        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and {date.today().isoformat()} <= appointmentDate")
+        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and {date.today().isoformat()} = appointmentDate")
         appointmentsPendingToday = c.fetchall()
+        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and {date.today().isoformat()} < appointmentDate")
+        appointmentsPendingLater = c.fetchall()
+
+        if len(appointmentsPendingLater) > 0:
+            for appointment in appointmentsPendingLater:
+                print(f"You have an appointment scheduled on with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]}")
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
                 if appointment[6] is not None:
@@ -78,7 +84,7 @@ def updateAppointments(current_user_type):
                     c.execute(f"update appointments set appointmentTime = '{time}' where appointmentID = '{appointment[0]}'")
                     database.commit()
         else:
-            print("You have no appointments upcoming.")
+            print("You have no appointments upcoming today.")
     elif current_user_type == "D":
         doctorID = current_user_data[0]
         c.execute(f"select * from appointments where doctorID = '{doctorID}' and '{date.today().isoformat()}' <= appointmentDate")
@@ -98,7 +104,18 @@ def updateAppointments(current_user_type):
             print("No upcoming appointments.")
         #print(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and {date.today().isoformat()} >= appointmentDate")
         c.execute(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and '{date.today().isoformat()}' >= appointmentDate")
-        doneAppointments = c.fetchall()
+        assumedDoneAppointments = c.fetchall()
+        doneAppointments = []
+        for assumedAppointment in assumedDoneAppointments:
+            if assumedAppointment[6] is not None:
+                    appointment_time = datetime.strptime(appointment[6], '%H:%M').time()  # Convert to time object
+                    
+                    # Get the current time
+                    current_time = datetime.now().time()
+                    
+                    # Compare the times
+                    if current_time > appointment_time:
+                        doneAppointments.append(assumedAppointment)
         print('doneAppointments', doneAppointments)
         if len(doneAppointments) > 0:
             if debug:
@@ -492,14 +509,18 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
 
 start_program()
 
-
-all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments panel', 'Exit'] #also update own info, group doctors by specialization, view pending appointments
-options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View prescriptions', 'Access appointments panel' if current_user_type == "D" else None, 'Exit']
-options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
+def resetMenuOptions(current_user_type):
+    all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments panel', 'Exit'] #also update own info, group doctors by specialization, view pending appointments
+    options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View prescriptions', 'Access appointments panel' if current_user_type == "D" else None, 'Exit']
+    options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
+    return all_options, options_menu_str, options_dict
+all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
 #Doctor's/Patients Panel
 while True:
     if current_user_data == None:
         start_program()
+    #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
+    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     updateAppointments(current_user_type)
     print('Account:\t', current_user_data)
     print("Enter action: ")
