@@ -62,3 +62,11 @@ Prescriptions table is pre-made.
 [doctors can log in. 
 
 doctors should be able to view any pending appointments, and] - not sure
+
+links:
+https://docs.python.org/3/library/datetime.html
+https://stackoverflow.com/questions/19924236/query-comparing-dates-in-sql
+https://pypi.org/project/bcrypt/
+https://www.w3schools.com/sql/sql_alter.asp
+https://www.w3schools.com/python/python_mysql_insert.asp
+https://www.w3schools.com/python/python_mysql_where.asp

@@ -1,5 +1,5 @@
 import mysql.connector
-from datetime import datetime
+from datetime import datetime, date
 import zampy
 from prettytable import PrettyTable, from_db_cursor
 import pickle
@@ -18,6 +18,7 @@ current_user_data = None
 # Define the path to the local directory
 directory = Path.home() / "HospitalManagement-PythonSQL"  # This creates a folder in the user's home directory
 
+debug = True
 # Create the directory if it doesn't exist
 os.makedirs(directory, exist_ok=True)
 
@@ -25,7 +26,7 @@ os.makedirs(directory, exist_ok=True)
 login_file = directory / "creds.dat"
 
 def checkPasswords(correct_password: str, name: str = "current user", usebcrypt = False) -> bool:
-    print(f"Enter password for {name}: ")
+    print(f"Enter password for:\t {name}")
     inpPassword = getpass.getpass()
     if usebcrypt:
         if bcrypt.checkpw(inpPassword.encode('utf-8'), correct_password):
@@ -36,7 +37,7 @@ def checkPasswords(correct_password: str, name: str = "current user", usebcrypt 
     return False
 
 def incorrectPassword():
-    print("incorrect password!")
+    print("Incorrect password!")
     #do something more here!
 def incrementNumericPart(text):
     number = int(text[1:]) + 1
@@ -50,6 +51,50 @@ def getHighestID(ordered_table):
         if currentNum > highestNum:
             highestNum = currentNum
     return ordered_table[0][0][0] + str(highestNum)  
+
+def updateAppointments(current_user_type):
+    global current_user_data
+    if current_user_type == "P":
+        #appointmentsPending = retreiveData('appointments', conditionNames=['patientID'], conditionValues=[current_user_data[0]])
+        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and {date.today().isoformat()} <= appointmentDate")
+        appointmentsPendingToday = c.fetchall()
+        if len(appointmentsPendingToday) > 0:
+            for appointment in appointmentsPendingToday:
+                if appointment[6] is not None:
+                    appointment_time = datetime.strptime(appointment[6], '%H:%M').time()  # Convert to time object
+                    
+                    # Get the current time
+                    current_time = datetime.now().time()
+                    
+                    # Compare the times
+                    if current_time < appointment_time:
+                        print(f"You have an upcoming appointment at {appointment_time} with Dr. {viewDoctorDetails(appointment[2])[1]}")
+                    #else:
+                        #Check for whether the record with same date and time, patientID and doctorID was added to medicalhistory. 
+                        #print(f"You missed an appointment that was scheduled for {appointment_time}")
+                else:
+                    print(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ")
+                    time = zampy.choose_time()
+                    c.execute(f"update appointments set appointmentTime = '{time}' where appointmentID = '{appointment[0]}'")
+                    database.commit()
+        else:
+            print("You have no appointments upcoming.")
+    elif current_user_type == "D":
+        c.execute(f"select * from appointments where doctorID = '{current_user_data[0]}' and {date.today().isoformat()} <= appointmentDate")
+        appointmentsPendingToday = c.fetchall()
+        if len(appointmentsPendingToday) > 0:
+            for appointment in appointmentsPendingToday:
+                if appointment[6] is not None:
+                    appointment_time = datetime.strptime(appointment[6], '%H:%M').time()  # Convert to time object
+                    
+                    # Get the current time
+                    current_time = datetime.now().time()
+                    
+                    # Compare the times
+                    if current_time < appointment_time:
+                        print(f"You have an upcoming appointment at {appointment_time} with {viewPatientDetails(appointment[1])[1]}")
+        else:
+            print("No upcoming appointments.")
 
 def start_program():
     global current_user_type
@@ -375,7 +420,8 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
     else:
         print("Received no tableName.")
         #return None
-    print("Final commmand:", command)
+    if debug:
+        print("Final commmand:", command)
 
     try:
         c.execute(command)
@@ -389,7 +435,7 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
             data = c.fetchone()
         return data
 
-def makeAppointment(patientID, doctorID, appointmentDate, appointmentReason):
+def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appointmentReason):
     if patientID and doctorID and appointmentDate and appointmentReason:
         appointmentID = ""
         #fetch existing appointments
@@ -404,18 +450,21 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentReason):
             appointmentID = f"A{int(data[-1][0][1]) + 1}"
         
         #c.execute(f"insert into appointments (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, status) values (%s, %s, %s, %s, %s, %s)", (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"))
-        add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"])
+        add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
 
 
 
 start_program()
 
 
-all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments history'] #also update own info, group doctors by specialization, view pending appointments
-options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View prescriptions', 'Access appointments history' if current_user_type == "D" else None]
+all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments panel', 'Exit'] #also update own info, group doctors by specialization, view pending appointments
+options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View prescriptions', 'Access appointments panel' if current_user_type == "D" else None, 'Exit']
 options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
 #Doctor's/Patients Panel
 while True:
+    if current_user_data == None:
+        start_program()
+    updateAppointments(current_user_type)
     print('Account:\t', current_user_data)
     print("Enter action: ")
     tempIndex = int(input(options_menu_str))
@@ -438,6 +487,7 @@ while True:
             doctorID = input("Enter doctor ID to make appointment to: ")
             #appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
             appointmentDate = zampy.choose_date()
+            appointmentTime = zampy.choose_time()
             appointmentReasonIndex = int(input(zampy.make_menu_from_options(['Check-up', 'Surgery', 'Physical Exam', 'Health Assessment'])))
             if appointmentReasonIndex == 1:
                 appointmentReason = "Check-up"
@@ -447,9 +497,9 @@ while True:
                 appointmentReason = 'Physical Exam'
             elif appointmentReasonIndex == 4:
                 appointmentReason = 'Health Assessment'
-            makeAppointment(current_user_data[0], doctorID, appointmentDate, appointmentReason)
+            makeAppointment(current_user_data[0], doctorID, appointmentDate, appointmentTime, appointmentReason)
         elif index == 3:
-            historyOptions = ['Access using recordID', 'Access your records by specific doctor (doctorID)', 'Access your history'] #add more options here
+            historyOptions = ['Access using a recordID', 'Access your records by specific doctor (doctorID)', 'Access your history'] #add more options here
             historyIndex = int(input(zampy.make_menu_from_options(historyOptions)))
             current_patient_id = current_user_data[0]
             if historyIndex == 1:
@@ -482,12 +532,15 @@ while True:
             if index == 1:
                 c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Scheduled'))
                 data = c.fetchall()
-                print(data)
+                print(data) 
                 # print(from_db_cursor(c))
             elif index == 2:
                 c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Completed'))
                 data = c.fetchall()
                 print(data)
                 # print(from_db_cursor(c))
+        elif index == 7:
+            print("Thank you for using this program.")
+            exit()
         else:
             print("Something went wrong.")
