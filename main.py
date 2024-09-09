@@ -12,6 +12,7 @@ import getpass
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
 #c = database.cursor(buffered=True)
+
 current_user_type = None
 current_user_data = None
 
@@ -52,8 +53,9 @@ def getHighestID(ordered_table):
             highestNum = currentNum
     return ordered_table[0][0][0] + str(highestNum)  
 
-def makeNewPrescription():
+def makeNewPrescription(returnPCID = True):
     prescription = input("Enter prescription name: ")
+    prescriptionID = None
     #check if it already exists
     c.execute(f"select * from prescriptions where medication_name = '{prescription}'")
     existingPrescriptions = c.fetchall()
@@ -63,9 +65,13 @@ def makeNewPrescription():
         for existingPrescription in existingPrescriptions:
             if existingPrescription[1] == prescription:
                 print("Details are:", existingPrescription)
+                prescriptionID = existingPrescription[0]
     else:
+        prescriptionID = incrementNumericPart(getHighestID(retreiveData('prescriptions')))
         dosage = input("Enter general dosage: ")
-        add_value_to_table('prescriptions', ['prescriptionID', 'medication_name', 'dosage'], [incrementNumericPart(getHighestID(retreiveData('prescriptions'))), prescription, dosage])
+        add_value_to_table('prescriptions', ['prescriptionID', 'medication_name', 'dosage'], [prescriptionID, prescription, dosage])
+    if returnPCID:
+        return prescriptionID
 
 def updateAppointments(current_user_type):
     global current_user_data
@@ -149,12 +155,16 @@ def updateAppointments(current_user_type):
                         #log into medical history
                         add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], diagnosis, prescriptionID, 'Completed'])
                         #delete from appointments.
-                        c.execute(f"delete from appointments where LOWER(appointmentID) = '{appointment[0].lower()}'")
-                        database.commit()
+
                     else:
                         print("Attempting to make a new prescription...")
-                        makeNewPrescription()
+                        pcID = makeNewPrescription()
+                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], diagnosis, pcID, 'Completed'])
+                        #delete from appointments.
+
                         #make a new prescription here!
+                    c.execute(f"delete from appointments where LOWER(appointmentID) = '{appointment[0].lower()}'")
+                    database.commit()
                 else:
                     print("Was the appointment cancelled?")
                     choice = int(input(zampy.make_menu_from_options()))

@@ -257,7 +257,7 @@ from tkcalendar import Calendar
 def choose_date():
     """Open a graphical popup to select a date. Returns date in 'YYYY-MM-DD' format."""
     root = tk.Tk()
-    root.withdraw()  # Hide the main window
+    #root.withdraw()  # Hide the main window
 
     # Create a new window for the calendar
     top = tk.Toplevel(root)
@@ -280,7 +280,7 @@ def choose_date():
 def choose_time():
     """Open a graphical popup to input time. Returns time in 'HOURS:MINUTES:SECONDS' format."""
     root = tk.Tk()
-    root.withdraw()  # Hide the main window
+    #root.withdraw()  # Hide the main window
     
     # Get user input for hours, minutes, and seconds
     hours = simpledialog.askstring("Input Time", "Enter hours (HH):", parent=root)
