@@ -66,7 +66,7 @@ def updateAppointments(current_user_type):
                 print(f"You have an appointment scheduled on with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]}")
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
-                if appointment[6] is not None:
+                if appointment[6] not in [None, 'None', 'NULL']:
                     appointment_time = datetime.strptime(appointment[6], '%H:%M').time()  # Convert to time object
                     
                     # Get the current time
@@ -91,7 +91,7 @@ def updateAppointments(current_user_type):
         appointmentsPendingToday = c.fetchall()
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
-                if appointment[6] is not None:
+                if appointment[6] not in [None, 'None', 'NULL']:
                     appointment_time = datetime.strptime(appointment[6], '%H:%M').time()  # Convert to time object
                     
                     # Get the current time
@@ -107,7 +107,7 @@ def updateAppointments(current_user_type):
         assumedDoneAppointments = c.fetchall()
         doneAppointments = []
         for assumedAppointment in assumedDoneAppointments:
-            if assumedAppointment[6] is not None:
+            if appointment[6] not in [None, 'None', 'NULL']:
                     appointment_time = datetime.strptime(appointment[6], '%H:%M').time()  # Convert to time object
                     
                     # Get the current time
@@ -138,6 +138,7 @@ def updateAppointments(current_user_type):
                         database.commit()
                     else:
                         print("Attempting to make a new prescription...")
+                        #make a new prescription here!
                 else:
                     print("Was the appointment cancelled?")
                     choice = int(input(zampy.make_menu_from_options()))
