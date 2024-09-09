@@ -11,7 +11,7 @@ import getpass
 
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
-
+#c = database.cursor(buffered=True)
 current_user_type = None
 current_user_data = None
 
@@ -80,7 +80,8 @@ def updateAppointments(current_user_type):
         else:
             print("You have no appointments upcoming.")
     elif current_user_type == "D":
-        c.execute(f"select * from appointments where doctorID = '{current_user_data[0]}' and {date.today().isoformat()} <= appointmentDate")
+        doctorID = current_user_data[0]
+        c.execute(f"select * from appointments where doctorID = '{doctorID}' and '{date.today().isoformat()}' <= appointmentDate")
         appointmentsPendingToday = c.fetchall()
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
@@ -95,7 +96,42 @@ def updateAppointments(current_user_type):
                         print(f"You have an upcoming appointment at {appointment_time} with {viewPatientDetails(appointment[1])[1]}")
         else:
             print("No upcoming appointments.")
-
+        #print(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and {date.today().isoformat()} >= appointmentDate")
+        c.execute(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and '{date.today().isoformat()}' >= appointmentDate")
+        doneAppointments = c.fetchall()
+        print('doneAppointments', doneAppointments)
+        if len(doneAppointments) > 0:
+            if debug:
+                print(len(doneAppointments), "completed appointments were found in appointments table. attempting to move them to medicalhistory...")
+            for appointment in doneAppointments:
+                patientID = appointment[1]
+                patientName = viewPatientDetails(patientID)[1]
+                print(f"Has the appointment scheduled with {patientName} been completed?")
+                choice = int(input(zampy.make_menu_from_options()))
+                if choice == 1:
+                    diagnosis = input("Enter diagnosis: ")
+                    prescriptionID = input("Enter prescriptionID: ") #check if it exists. if it doesnt make a new one and then reference it.
+                    print(f"Is the prescription prescribed: {viewPrescriptions(prescriptionID,False)}?")
+                    confirm = int(input(zampy.make_menu_from_options()))
+                    if confirm == 1:
+                        #log into medical history
+                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], diagnosis, prescriptionID, 'Completed'])
+                        #delete from appointments.
+                        c.execute(f"delete from appointments where appointmentID = '{appointment[0]}'")
+                        database.commit()
+                    else:
+                        print("Attempting to make a new prescription...")
+                else:
+                    print("Was the appointment cancelled?")
+                    choice = int(input(zampy.make_menu_from_options()))
+                    if choice == 1:
+                        #log into medical history, 
+                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], 'NULL', 'NULL','Cancelled']) 
+                        #delete from appointments.
+                        c.execute(f"delete from appointments where appointmentID = '{appointment[0]}'")
+                        database.commit()
+                    #delay mechanism?
+                    
 def start_program():
     global current_user_type
     global current_user_data
@@ -365,7 +401,7 @@ def viewPrescriptions(pID = None, all = True):
     else:
         if pID:
             #c.execute(f"select * from prescriptions where prescriptionID = '{pID}'")
-            return retreiveData("prescriptions", True, returnAllData=False)
+            return retreiveData("prescriptions", allColumns=True, returnAllData=False, conditionNames=['prescriptionID'], conditionValues=[pID])
 
 def viewRecordDetails(patientID ,recordID = None, doctorID = None, all = False):
     if recordID:
