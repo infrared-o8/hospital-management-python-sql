@@ -52,6 +52,21 @@ def getHighestID(ordered_table):
             highestNum = currentNum
     return ordered_table[0][0][0] + str(highestNum)  
 
+def makeNewPrescription():
+    prescription = input("Enter prescription name: ")
+    #check if it already exists
+    c.execute(f"select * from prescriptions where medication_name = '{prescription}'")
+    existingPrescriptions = c.fetchall()
+    if len(existingPrescriptions) > 0:
+        #exists already!
+        print(f"A prescription already recorded with the same name was found.\n")
+        for existingPrescription in existingPrescriptions:
+            if existingPrescription[1] == prescription:
+                print("Details are:", existingPrescription)
+    else:
+        dosage = input("Enter general dosage: ")
+        add_value_to_table('prescriptions', ['prescriptionID', 'medication_name', 'dosage'], [incrementNumericPart(getHighestID(retreiveData('prescriptions'))), prescription, dosage])
+
 def updateAppointments(current_user_type):
     global current_user_data
     if current_user_type == "P":
@@ -128,7 +143,7 @@ def updateAppointments(current_user_type):
                 if choice == 1:
                     diagnosis = input("Enter diagnosis: ")
                     prescriptionID = input("Enter prescriptionID: ") #check if it exists. if it doesnt make a new one and then reference it.
-                    print(f"Is the prescription prescribed: {viewPrescriptions(prescriptionID,False)}?")
+                    print(f"Is this the prescription: {viewPrescriptions(prescriptionID,False)}?")
                     confirm = int(input(zampy.make_menu_from_options()))
                     if confirm == 1:
                         #log into medical history
@@ -138,6 +153,7 @@ def updateAppointments(current_user_type):
                         database.commit()
                     else:
                         print("Attempting to make a new prescription...")
+                        makeNewPrescription()
                         #make a new prescription here!
                 else:
                     print("Was the appointment cancelled?")
