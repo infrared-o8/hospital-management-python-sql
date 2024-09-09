@@ -87,7 +87,7 @@ def updateAppointments(current_user_type):
             print("You have no appointments upcoming today.")
     elif current_user_type == "D":
         doctorID = current_user_data[0]
-        c.execute(f"select * from appointments where doctorID = '{doctorID}' and '{date.today().isoformat()}' <= appointmentDate")
+        c.execute(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and '{date.today().isoformat()}' <= appointmentDate")
         appointmentsPendingToday = c.fetchall()
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
