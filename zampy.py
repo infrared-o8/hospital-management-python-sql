@@ -250,6 +250,10 @@ def check_record_exists(checkingParameter, indexInRecord, tableData) -> tuple:
 def checkEmpty(iterable) -> bool:
     return True if len(iterable) == 0 else False
 
+import tkinter as tk
+from tkinter import ttk, simpledialog
+from tkcalendar import Calendar
+
 def choose_date():
     """Open a graphical popup to select a date. Returns date in 'YYYY-MM-DD' format."""
     root = tk.Tk()
@@ -259,38 +263,76 @@ def choose_date():
     top = tk.Toplevel(root)
     top.title("Choose Date")
     
+    # Set focus on the window
+    top.focus_force()
+    
     cal = Calendar(top, selectmode='day', date_pattern='y-mm-dd')
     cal.pack(padx=10, pady=10)
-
+    
+    selected_date = None  # Variable to store selected date
+    
     def on_date_selected():
+        nonlocal selected_date
         selected_date = cal.get_date()  # Get selected date in 'YYYY-MM-DD'
         top.destroy()  # Close the date picker window
         root.quit()  # Quit the mainloop
-        return selected_date
 
     ttk.Button(top, text="Select Date", command=on_date_selected).pack(pady=10)
     
     root.mainloop()
-    return cal.get_date()
+    return selected_date
 
 def choose_time():
-    """Open a graphical popup to input time. Returns time in 'HOURS:MINUTES:SECONDS' format."""
+    """Open a graphical popup to input time. Returns time in 'HOURS:MINUTES' or 'HOURS:MINUTES:SECONDS' format."""
     root = tk.Tk()
     root.withdraw()  # Hide the main window
     
-    # Get user input for hours, minutes, and seconds
-    hours = simpledialog.askstring("Input Time", "Enter hours (HH):", parent=root)
-    minutes = simpledialog.askstring("Input Time", "Enter minutes (MM):", parent=root)
-    seconds = simpledialog.askstring("Input Time", "Enter seconds (SS, optional):", parent=root)
-
-    # Validate the inputs and format the time
-    if hours is None or minutes is None:
-        return None
-    if seconds is None or seconds == "":
-        time_str = f"{hours.zfill(2)}:{minutes.zfill(2)}"
-    else:
-        time_str = f"{hours.zfill(2)}:{minutes.zfill(2)}:{seconds.zfill(2)}"
+    # Create a new window for time selection
+    top = tk.Toplevel(root)
+    top.title("Choose Time")
     
-    root.quit()
-    return time_str
+    # Set focus on the window
+    top.focus_force()
+
+    # Create input fields for hours, minutes, and seconds
+    ttk.Label(top, text="Enter hours (HH):").grid(row=0, column=0, padx=10, pady=5)
+    hours_var = tk.StringVar()
+    hours_entry = ttk.Entry(top, textvariable=hours_var, width=5)
+    hours_entry.grid(row=0, column=1, padx=10, pady=5)
+    
+    ttk.Label(top, text="Enter minutes (MM):").grid(row=1, column=0, padx=10, pady=5)
+    minutes_var = tk.StringVar()
+    minutes_entry = ttk.Entry(top, textvariable=minutes_var, width=5)
+    minutes_entry.grid(row=1, column=1, padx=10, pady=5)
+    
+    ttk.Label(top, text="Enter seconds (SS, optional):").grid(row=2, column=0, padx=10, pady=5)
+    seconds_var = tk.StringVar()
+    seconds_entry = ttk.Entry(top, textvariable=seconds_var, width=5)
+    seconds_entry.grid(row=2, column=1, padx=10, pady=5)
+    
+    # Autofocus the hours entry field
+    hours_entry.focus()
+
+    selected_time = None  # Variable to store selected time
+    
+    def on_time_selected():
+        nonlocal selected_time
+        hours = hours_var.get()
+        minutes = minutes_var.get()
+        seconds = seconds_var.get()
+
+        # Validate the inputs and format the time
+        if hours and minutes:
+            if seconds:
+                selected_time = f"{hours.zfill(2)}:{minutes.zfill(2)}:{seconds.zfill(2)}"
+            else:
+                selected_time = f"{hours.zfill(2)}:{minutes.zfill(2)}"
+        top.destroy()  # Close the window
+        root.quit()  # Quit the mainloop
+
+    ttk.Button(top, text="Select Time", command=on_time_selected).grid(row=3, column=0, columnspan=2, pady=10)
+    
+    root.mainloop()
+    return selected_time
+
 

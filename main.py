@@ -56,9 +56,9 @@ def updateAppointments(current_user_type):
     global current_user_data
     if current_user_type == "P":
         #appointmentsPending = retreiveData('appointments', conditionNames=['patientID'], conditionValues=[current_user_data[0]])
-        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and {date.today().isoformat()} = appointmentDate")
+        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and '{date.today().isoformat()}' = appointmentDate")
         appointmentsPendingToday = c.fetchall()
-        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and {date.today().isoformat()} < appointmentDate")
+        c.execute(f"select * from appointments where patientID = '{current_user_data[0]}' and '{date.today().isoformat()}' < appointmentDate")
         appointmentsPendingLater = c.fetchall()
 
         if len(appointmentsPendingLater) > 0:

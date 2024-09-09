@@ -70,3 +70,4 @@ https://pypi.org/project/bcrypt/
 https://www.w3schools.com/sql/sql_alter.asp
 https://www.w3schools.com/python/python_mysql_insert.asp
 https://www.w3schools.com/python/python_mysql_where.asp
+https://stackoverflow.com/questions/13626406/setting-focus-to-specific-tkinter-entry-widget
