@@ -84,7 +84,7 @@ def updateAppointments(current_user_type):
 
         if len(appointmentsPendingLater) > 0:
             for appointment in appointmentsPendingLater:
-                print(f"You have an appointment scheduled on with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]}")
+                print(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]}")
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
                 if appointment[6] not in [None, 'None', 'NULL']:
@@ -106,19 +106,24 @@ def updateAppointments(current_user_type):
                     flag = False
                     #check if the patient has another appointment at chosen time
                     if timeDateTime > datetime.now().time():
-                        for appointment in appointmentsPendingToday:
-                            if timeDateTime == datetime.strptime(appointment[6], '%H:%M').time():
-                                flag = True
-                                break
-                        if not flag:
-                        #check if doctor has another appointment at chosen time
-                            c.execute(f"select * from appointments where doctorID = '{appointment[2]}' and appointmentTime = '{timeInput}'")
-                            potentialDoctorBusy = c.fetchall()
-                            if len(potentialDoctorBusy) > 0:
-                                print("Sorry! The doctor is busy at that time. Please try another time.")
-                            else:
-                                c.execute(f"update appointments set appointmentTime = '{timeInput}' where LOWER(appointmentID) = '{appointment[0].lower()}'")
-                                database.commit()
+                        c.execute(f"select * from appointments where patientID = '{appointment[1]}' and appointmentTime = '{timeInput}'")
+                        potentialPatientAlreadyOccupied = c.fetchall()
+                        if len(potentialPatientAlreadyOccupied) == 0:
+                            for appointment in appointmentsPendingToday:
+                                if timeDateTime == datetime.strptime(appointment[6], '%H:%M').time():
+                                    flag = True
+                                    break
+                            if not flag:
+                            #check if doctor has another appointment at chosen time
+                                c.execute(f"select * from appointments where doctorID = '{appointment[2]}' and appointmentTime = '{timeInput}'")
+                                potentialDoctorBusy = c.fetchall()
+                                if len(potentialDoctorBusy) > 0:
+                                    print("Sorry! The doctor is busy at that time. Please try another time.")
+                                else:
+                                    c.execute(f"update appointments set appointmentTime = '{timeInput}' where LOWER(appointmentID) = '{appointment[0].lower()}'")
+                                    database.commit()
+                        else:
+                            print("You already have an appointment at that time:", potentialPatientAlreadyOccupied[0])
                     else:
                         print("A time in the past cannot be chosen. Please choose an appropriate time.")
 
@@ -536,8 +541,7 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
         return data
 
 def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appointmentReason):
-    if patientID and doctorID and appointmentDate and appointmentReason:
-        appointmentID = ""
+    if patientID and doctorID and appointmentDate and appointmentReason and appointmentTime:
         #fetch existing appointments
         #c.execute("select * from appointments")
         #data = c.fetchall()
@@ -550,8 +554,52 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
             appointmentID = f"{incrementNumericPart(getHighestID(retreiveData('appointments')))}"
         
         #c.execute(f"insert into appointments (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, status) values (%s, %s, %s, %s, %s, %s)", (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"))
-        add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
-
+        #timeInput = zampy.choose_time()
+        appointDateTimeFormat = datetime.strptime(appointmentTime, "%H:%M").time() 
+        #check if the patient has another appointment at chosen time
+        todayStr = str(datetime.today().date())
+        if appointmentDate >= todayStr: #check if the appointmentDate is today. If it is, 
+            if appointmentDate == todayStr:
+                print("appointmentdate chosen was today!")
+                #ensure time doesnt overlap.
+                if appointDateTimeFormat > datetime.now().time(): #check if its not in the past
+                    c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate and appointmentTime = '{appointmentTime}'")
+                    potentialPatientAlreadyHasAppointment = c.fetchall()
+                    if len(potentialPatientAlreadyHasAppointment) > 0:
+                        print("You already have an appointment at that time!")
+                    else:
+                        #check if doctor has another appointment at chosen time
+                        c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}'")
+                        potentialDoctorBusy = c.fetchall()
+                        if len(potentialDoctorBusy) > 0:
+                            print("Sorry! The doctor is busy at that time. Please try another time.")
+                        else:
+                            add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
+                            if debug:
+                                print("Succeeded in making appointment!")
+                else:
+                    print("Time cannot be chosen in the past.")
+            elif appointmentDate > todayStr:
+                print("appointmentdate chosen was after today!")
+                #ensure time doesnt overlap.
+                c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{appointmentDate}' = appointmentDate and appointmentTime = '{appointmentTime}'")
+                potentialPatientAlreadyHasAppointment = c.fetchall()
+                if len(potentialPatientAlreadyHasAppointment) > 0:
+                    print("You already have an appointment at that time!")
+                else:
+                    #check if doctor has another appointment at chosen time
+                    c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and appointmentDate = {appointmentDate}")
+                    potentialDoctorBusy = c.fetchall()
+                    print("command: ", f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and appointmentDate = '{appointmentDate}'")
+                    print("potentialDoctorBusy: ", potentialDoctorBusy)
+                    if len(potentialDoctorBusy) > 0:
+                        print("Sorry! The doctor is busy at that time. Please try another time.")
+                    else:
+                        add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
+                        if debug:
+                            print("Succeeded in making appointment!")
+        else:
+            print("Cant choose a date in the past!")
 
 
 start_program()
@@ -592,7 +640,7 @@ while True:
             #appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
             appointmentDate = zampy.choose_date()
             appointmentTime = zampy.choose_time()
-            
+
             appointmentReasonIndex = int(input(zampy.make_menu_from_options(['Check-up', 'Surgery', 'Physical Exam', 'Health Assessment'])))
             if appointmentReasonIndex == 1:
                 appointmentReason = "Check-up"
