@@ -105,27 +105,27 @@ def updateAppointments(current_user_type):
                     timeDateTime = datetime.strptime(timeInput, "%H:%M").time()
                     flag = False
                     #check if the patient has another appointment at chosen time
-                    if timeDateTime > datetime.now().time():
-                        c.execute(f"select * from appointments where patientID = '{appointment[1]}' and appointmentTime = '{timeInput}'")
-                        potentialPatientAlreadyOccupied = c.fetchall()
-                        if len(potentialPatientAlreadyOccupied) == 0:
-                            for appointment in appointmentsPendingToday:
-                                if timeDateTime == datetime.strptime(appointment[6], '%H:%M').time():
-                                    flag = True
-                                    break
-                            if not flag:
-                            #check if doctor has another appointment at chosen time
-                                c.execute(f"select * from appointments where doctorID = '{appointment[2]}' and appointmentTime = '{timeInput}'")
-                                potentialDoctorBusy = c.fetchall()
-                                if len(potentialDoctorBusy) > 0:
-                                    print("Sorry! The doctor is busy at that time. Please try another time.")
-                                else:
-                                    c.execute(f"update appointments set appointmentTime = '{timeInput}' where LOWER(appointmentID) = '{appointment[0].lower()}'")
-                                    database.commit()
+                    #appointDateTimeFormat = datetime.strptime(appointmentTime, "%H:%M").time() 
+                    #check if the patient has another appointment at chosen time
+                    #todayStr = str(datetime.today().date())
+                    #ensure time doesnt overlap.
+                    if timeDateTime > datetime.now().time(): #check if its not in the past
+                        c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate and appointmentTime = '{appointmentTime}'")
+                        potentialPatientAlreadyHasAppointment = c.fetchall()
+                        if len(potentialPatientAlreadyHasAppointment) > 0:
+                            print("You already have an appointment at that time!")
                         else:
-                            print("You already have an appointment at that time:", potentialPatientAlreadyOccupied[0])
+                            #check if doctor has another appointment at chosen time
+                            c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}'")
+                            potentialDoctorBusy = c.fetchall()
+                            if len(potentialDoctorBusy) > 0:
+                                print("Sorry! The doctor is busy at that time. Please try another time.")
+                            else:
+                                add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointment[0], patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
+                                if debug:
+                                    print("Succeeded in making appointment!")
                     else:
-                        print("A time in the past cannot be chosen. Please choose an appropriate time.")
+                        print("Time cannot be chosen in the past.")
 
                     #c.execute("select * from appointments where patientID = '{}' and ")
 
