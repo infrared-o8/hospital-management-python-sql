@@ -25,6 +25,16 @@ os.makedirs(directory, exist_ok=True)
 
 # Define the login file path
 login_file = directory / "creds.dat"
+log_file = directory / 'log.txt'
+
+def log(text):
+    file = None
+    try:
+        file = open(log_file, 'a')
+    except Exception as e:
+        print("Error while trying to open log_file:", e)
+        file = open(log_file, "w")
+    file.write(f'{str(datetime.now())}: {text}\n')
 
 def checkPasswords(correct_password: str, name: str = "current user", usebcrypt = False) -> bool:
     print(f"Enter password for:\t {name}")
@@ -70,6 +80,7 @@ def makeNewPrescription(returnPCID = True):
         prescriptionID = incrementNumericPart(getHighestID(retreiveData('prescriptions')))
         dosage = input("Enter general dosage: ")
         add_value_to_table('prescriptions', ['prescriptionID', 'medication_name', 'dosage'], [prescriptionID, prescription, dosage])
+        log(f'New prescription added with: {[prescriptionID, prescription, dosage]}')
     if returnPCID:
         return prescriptionID
 
@@ -123,8 +134,10 @@ def updateAppointments(current_user_type):
                                 add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointment[0], patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
                                 if debug:
                                     print("Succeeded in making appointment!")
+                                    log("Succeeded in making appointment!")
                     else:
                         print("Time cannot be chosen in the past.")
+
 
                     #c.execute("select * from appointments where patientID = '{}' and ")
 
@@ -162,9 +175,11 @@ def updateAppointments(current_user_type):
                     if current_time > appointment_time:
                         doneAppointments.append(assumedAppointment)
         print('doneAppointments', doneAppointments)
+        log(f'doneAppointments requested: {doneAppointments}')
         if len(doneAppointments) > 0:
             if debug:
                 print(len(doneAppointments), "completed appointments were found in appointments table. attempting to move them to medicalhistory...")
+                log(f"{len(doneAppointments), } completed appointments were found in appointments table. attempting to move them to medicalhistory...")
             for appointment in doneAppointments:
                 patientID = appointment[1]
                 patientName = viewPatientDetails(patientID)[1]
@@ -182,6 +197,7 @@ def updateAppointments(current_user_type):
 
                     else:
                         print("Attempting to make a new prescription...")
+                        log(f"Attempting to make a new prescription.")
                         pcID = makeNewPrescription()
                         add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], diagnosis, pcID, 'Completed'])
                         #delete from appointments.
@@ -212,6 +228,7 @@ def start_program():
         found_user_password = bfilecontents[2]
     except Exception as e:
         print("Some error occured while trying to access existing login-file:", e)
+        log(f"Some error occured while trying to access existing login-file: {e}.\nProceeding to normal login.")
         print("Proceeding to normal login...")
         try:
             print("Using as:\n")
@@ -240,6 +257,7 @@ def start_program():
                 current_user_type = bfilecontents[0]
                 current_user_data = bfilecontents[1]
                 print("Succesfully logged in as", current_user_data[1])
+                
             else:
                 incorrectPassword()
         else:
@@ -285,7 +303,7 @@ def make_new_record(ordered_table, name, usertype):
             confirm_data = retreiveData('patients', allColumns=True)
 
             print("Updated patients table\n", confirm_data)
-
+            log(f"Updated patients table: {confirm_data}")
             #c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
             #current_user_data = c.fetchone()
 
@@ -310,7 +328,7 @@ def make_new_record(ordered_table, name, usertype):
 
             confirm_data = retreiveData('doctors', allColumns=True)
             print("Updated doctors table\n", confirm_data)
-
+            log(f"Updated doctors table: {confirm_data}")
             #c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
             #current_user_data = c.fetchone()
 
@@ -526,11 +544,13 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
         #return None
     if debug:
         print("Final commmand:", command)
+        log(f"Final commmand: {command}")
 
     try:
         c.execute(command)
     except Exception as e:
         print("Error while trying to retrieve data:", e)
+        log(f"Error while trying to retrieve data: {e}")
         return None
     else:
         if returnAllData:
@@ -559,23 +579,27 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
         todayStr = str(datetime.today().date())
         if appointmentDate >= todayStr: #check if the appointmentDate is today. If it is, 
             if appointmentDate == todayStr:
-                print("appointmentdate chosen was today!")
+                #print("appointmentdate chosen was today!")
+                log("appointmentdate chosen was today!")
                 #ensure time doesnt overlap.
                 if appointDateTimeFormat > datetime.now().time(): #check if its not in the past of today.
                     c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate and appointmentTime = '{appointmentTime}'")
                     potentialPatientAlreadyHasAppointment = c.fetchall()
                     if len(potentialPatientAlreadyHasAppointment) > 0:
                         print("You already have an appointment at that time!")
+                        log(f"You already have an appointment at that time: {potentialPatientAlreadyHasAppointment}")
                     else:
                         #check if doctor has another appointment at chosen time
                         c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime} and '{date.today().isoformat()}' = appointmentDate'")
                         potentialDoctorBusy = c.fetchall()
                         if len(potentialDoctorBusy) > 0:
                             print("Sorry! The doctor is busy at that time. Please try another time.")
+                            log(f"Doctor already has appointment at that time: {potentialDoctorBusy}")
                         else:
                             add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
                             if debug:
                                 print("Succeeded in making appointment!")
+                                log('Succeeded in making appointment!')
                 else:
                     print("Time cannot be chosen in the past.")
             elif appointmentDate > todayStr:
@@ -597,8 +621,10 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
                         add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
                         if debug:
                             print("Succeeded in making appointment!")
+                            log("Succeeded in making appointment!")
         else:
             print("Cant choose a date in the past!")
+            
 
 
 start_program()
@@ -617,6 +643,7 @@ while True:
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     updateAppointments(current_user_type)
     print('Account:\t', current_user_data)
+    log(f"Account used: {current_user_type}")
     print("Enter action: ")
     tempIndex = int(input(options_menu_str))
     action = options_dict[tempIndex]
@@ -624,6 +651,7 @@ while True:
         index = all_options.index(action)
     except Exception as e:
         print(f"Error occured:", e)
+        log(f'Error occured while trying to read index: {e}')
     else:
         if index == 0:
             patientID = (input("Enter patient ID: "))
@@ -696,3 +724,4 @@ while True:
             exit()
         else:
             print("Something went wrong.")
+            log(f"Unforeseen error when index was {index}.")
