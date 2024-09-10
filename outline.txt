@@ -71,3 +71,5 @@ https://www.w3schools.com/sql/sql_alter.asp
 https://www.w3schools.com/python/python_mysql_insert.asp
 https://www.w3schools.com/python/python_mysql_where.asp
 https://stackoverflow.com/questions/13626406/setting-focus-to-specific-tkinter-entry-widget
+https://stackoverflow.com/questions/1054984/how-can-i-get-column-names-from-a-table-in-sql-server
+https://www.geeksforgeeks.org/creating-tables-with-prettytable-library-python/

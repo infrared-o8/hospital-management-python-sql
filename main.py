@@ -669,7 +669,14 @@ while True:
         elif index == 1:
             doctorID = (input("Enter doctor ID: "))
             data = viewDoctorDetails(doctorID)
-            print("Requested data:", data)
+            #print("Requested data:", data)
+            c.execute("SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N\'doctors\'")
+            columnNames = c.fetchall()
+            #print([x for x in columnNames])
+            table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
+            #print([x for x in data])
+            table.add_row([x for x in data])
+            print(table)
         elif index == 2:
             #Make an appointment
             doctorID = input("Enter doctor ID to make appointment to: ")
