@@ -107,9 +107,15 @@ def updateAppointments(current_user_type):
                     # Compare the times
                     if current_time < appointment_time:
                         print(f"You have an upcoming appointment at {appointment_time} with Dr. {viewDoctorDetails(appointment[2])[1]}")
-                    #else:
+                    else:
                         #Check for whether the record with same date and time, patientID and doctorID was added to medicalhistory. 
-                        #print(f"You missed an appointment that was scheduled for {appointment_time}")
+                        #missedRecordConfirm = retreiveData('medicalhistory', conditionNames=['patientID', 'doctorID', 'visitDate', 'time'], conditionValues=[current_user_data[0], appointment[2], str(date.today().isoformat()), appointment_time])
+                        c.execute(f"select * from medicalhistory where patientID = '{current_user_data[0]}' and doctorID = '{appointment[2]}' and visitDate = '{date.today().isoformat()}' and time = '{appointment_time}'")
+                        missedRecordConfirm = c.fetchall()
+                        if missedRecordConfirm:
+                            if len(missedRecordConfirm) > 0:
+                                print(f"You missed an appointment that was scheduled for {appointment_time}")
+                                log(f'{current_user_data[1]} missed an appointment: {missedRecordConfirm}')
                 else:
                     print(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ")
                     timeInput = zampy.choose_time()
@@ -144,7 +150,8 @@ def updateAppointments(current_user_type):
         else:
             print("You have no appointments upcoming today.")
     elif current_user_type == "D":
-        doctorID = current_user_data[0]
+        if current_user_data:
+            doctorID = current_user_data[0]
         c.execute(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and '{date.today().isoformat()}' <= appointmentDate")
         appointmentsPendingToday = c.fetchall()
         if len(appointmentsPendingToday) > 0:
@@ -411,6 +418,8 @@ def login(user_type):
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
                 signup(user_type)
+            else:
+                start_program()
         else:
             cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
             cpassword = cpassword[0]
