@@ -103,7 +103,6 @@ def updateAppointments(current_user_type):
                     print(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ")
                     timeInput = zampy.choose_time()
                     timeDateTime = datetime.strptime(timeInput, "%H:%M").time()
-                    flag = False
                     #check if the patient has another appointment at chosen time
                     #appointDateTimeFormat = datetime.strptime(appointmentTime, "%H:%M").time() 
                     #check if the patient has another appointment at chosen time
@@ -173,7 +172,7 @@ def updateAppointments(current_user_type):
                 choice = int(input(zampy.make_menu_from_options()))
                 if choice == 1:
                     diagnosis = input("Enter diagnosis: ")
-                    prescriptionID = input("Enter prescriptionID: ") #check if it exists. if it doesnt make a new one and then reference it.
+                    prescriptionID = input("Enter prescriptionID: ")
                     print(f"Is this the prescription: {viewPrescriptions(prescriptionID,False)}?")
                     confirm = int(input(zampy.make_menu_from_options()))
                     if confirm == 1:
@@ -562,14 +561,14 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
             if appointmentDate == todayStr:
                 print("appointmentdate chosen was today!")
                 #ensure time doesnt overlap.
-                if appointDateTimeFormat > datetime.now().time(): #check if its not in the past
+                if appointDateTimeFormat > datetime.now().time(): #check if its not in the past of today.
                     c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate and appointmentTime = '{appointmentTime}'")
                     potentialPatientAlreadyHasAppointment = c.fetchall()
                     if len(potentialPatientAlreadyHasAppointment) > 0:
                         print("You already have an appointment at that time!")
                     else:
                         #check if doctor has another appointment at chosen time
-                        c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}'")
+                        c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime} and '{date.today().isoformat()}' = appointmentDate'")
                         potentialDoctorBusy = c.fetchall()
                         if len(potentialDoctorBusy) > 0:
                             print("Sorry! The doctor is busy at that time. Please try another time.")
@@ -588,10 +587,10 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
                     print("You already have an appointment at that time!")
                 else:
                     #check if doctor has another appointment at chosen time
-                    c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and appointmentDate = {appointmentDate}")
+                    c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and appointmentDate = '{appointmentDate}'")
                     potentialDoctorBusy = c.fetchall()
-                    print("command: ", f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and appointmentDate = '{appointmentDate}'")
-                    print("potentialDoctorBusy: ", potentialDoctorBusy)
+                    #print("command: ", f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and appointmentDate = '{appointmentDate}'")
+                    #print("potentialDoctorBusy: ", potentialDoctorBusy)
                     if len(potentialDoctorBusy) > 0:
                         print("Sorry! The doctor is busy at that time. Please try another time.")
                     else:
