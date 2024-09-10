@@ -27,6 +27,15 @@ os.makedirs(directory, exist_ok=True)
 login_file = directory / "creds.dat"
 log_file = directory / 'log.txt'
 
+def makeTable(tableName, data):
+    c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N\'{tableName}\'")
+    columnNames = c.fetchall()
+    #print([x for x in columnNames])
+    table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
+    #print([x for x in data])
+    table.add_row([x for x in data])
+    print(table)
+
 def log(text):
     file = None
     try:
@@ -670,13 +679,7 @@ while True:
             doctorID = (input("Enter doctor ID: "))
             data = viewDoctorDetails(doctorID)
             #print("Requested data:", data)
-            c.execute("SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N\'doctors\'")
-            columnNames = c.fetchall()
-            #print([x for x in columnNames])
-            table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
-            #print([x for x in data])
-            table.add_row([x for x in data])
-            print(table)
+            print(makeTable('doctors', data))
         elif index == 2:
             #Make an appointment
             doctorID = input("Enter doctor ID to make appointment to: ")
