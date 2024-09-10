@@ -257,12 +257,13 @@ from tkcalendar import Calendar
 def choose_date():
     """Open a graphical popup to select a date. Returns date in 'YYYY-MM-DD' format."""
     root = tk.Tk()
-    #root.withdraw()  # Hide the main window
+    
+    root.withdraw()  # Hide the main window
 
     # Create a new window for the calendar
     top = tk.Toplevel(root)
     top.title("Choose Date")
-    
+    top.focus()
     cal = Calendar(top, selectmode='day', date_pattern='y-mm-dd')
     cal.pack(padx=10, pady=10)
 
@@ -280,20 +281,19 @@ def choose_date():
 def choose_time():
     """Open a graphical popup to input time. Returns time in 'HOURS:MINUTES:SECONDS' format."""
     root = tk.Tk()
-    #root.withdraw()  # Hide the main window
-    
+    root.withdraw()  # Hide the main window
+    root.focus_force()
+    #root.focus()
     # Get user input for hours, minutes, and seconds
     hours = simpledialog.askstring("Input Time", "Enter hours (HH):", parent=root)
     minutes = simpledialog.askstring("Input Time", "Enter minutes (MM):", parent=root)
-    seconds = simpledialog.askstring("Input Time", "Enter seconds (SS, optional):", parent=root)
+    #seconds = simpledialog.askstring("Input Time", "Enter seconds (SS, optional):", parent=root)
 
     # Validate the inputs and format the time
     if hours is None or minutes is None:
         return None
-    if seconds is None or seconds == "":
-        time_str = f"{hours.zfill(2)}:{minutes.zfill(2)}"
-    else:
-        time_str = f"{hours.zfill(2)}:{minutes.zfill(2)}:{seconds.zfill(2)}"
+    time_str = f"{hours.zfill(2)}:{minutes.zfill(2)}"
+
     
     root.quit()
     return time_str

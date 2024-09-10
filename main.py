@@ -101,9 +101,29 @@ def updateAppointments(current_user_type):
                         #print(f"You missed an appointment that was scheduled for {appointment_time}")
                 else:
                     print(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ")
-                    time = zampy.choose_time()
-                    c.execute(f"update appointments set appointmentTime = '{time}' where LOWER(appointmentID) = '{appointment[0].lower()}'")
-                    database.commit()
+                    timeInput = zampy.choose_time()
+                    timeDateTime = datetime.strptime(timeInput, "%H:%M").time()
+                    flag = False
+                    #check if the patient has another appointment at chosen time
+                    if timeDateTime > datetime.now().time():
+                        for appointment in appointmentsPendingToday:
+                            if timeDateTime == datetime.strptime(appointment[6], '%H:%M').time():
+                                flag = True
+                                break
+                        if not flag:
+                        #check if doctor has another appointment at chosen time
+                            c.execute(f"select * from appointments where doctorID = '{appointment[2]}' and appointmentTime = '{timeInput}'")
+                            potentialDoctorBusy = c.fetchall()
+                            if len(potentialDoctorBusy) > 0:
+                                print("Sorry! The doctor is busy at that time. Please try another time.")
+                            else:
+                                c.execute(f"update appointments set appointmentTime = '{timeInput}' where LOWER(appointmentID) = '{appointment[0].lower()}'")
+                                database.commit()
+                    else:
+                        print("A time in the past cannot be chosen. Please choose an appropriate time.")
+
+                    #c.execute("select * from appointments where patientID = '{}' and ")
+
         else:
             print("You have no appointments upcoming today.")
     elif current_user_type == "D":
@@ -527,7 +547,7 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
         if zampy.checkEmpty(data):
             appointmentID = "A1"
         else:
-            appointmentID = f"A{int(data[-1][0][1]) + 1}"
+            appointmentID = f"{incrementNumericPart(getHighestID(retreiveData('appointments')))}"
         
         #c.execute(f"insert into appointments (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, status) values (%s, %s, %s, %s, %s, %s)", (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"))
         add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
@@ -572,6 +592,7 @@ while True:
             #appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
             appointmentDate = zampy.choose_date()
             appointmentTime = zampy.choose_time()
+            
             appointmentReasonIndex = int(input(zampy.make_menu_from_options(['Check-up', 'Surgery', 'Physical Exam', 'Health Assessment'])))
             if appointmentReasonIndex == 1:
                 appointmentReason = "Check-up"
