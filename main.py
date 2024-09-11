@@ -11,7 +11,6 @@ import getpass
 import tkinter as tk
 from tkinter import ttk
 
-
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
 #c = database.cursor(buffered=True)
@@ -32,22 +31,58 @@ os.makedirs(directory, exist_ok=True)
 login_file = directory / "creds.dat"
 log_file = directory / 'log.txt'
 
+def convertTime(rawTime):
+    #"""Converts 24-hour formatted time (HH:MM:SS) to 12-hour AM/PM format."""
+    # Split the rawTime into components
+    time_parts = rawTime.split(":")
+    hour = int(time_parts[0])
+    minutes = time_parts[1]
+    #seconds = time_parts[2] if len(time_parts) == 3 else "00"  # Default to "00" if no seconds are provided
+    
+    # Determine AM/PM and adjust hour
+    period = "AM"
+    if hour == 0:
+        hour = 12
+    elif hour >= 12:
+        period = "PM"
+        if hour > 12:
+            hour -= 12
+    
+    # Return formatted time
+    return f"{hour}:{minutes} {period}"
+
 def checkIfNonNull(variable):
-    if variable not in [None, 'None', 'NULL', 'Null', (None,), ('NULL',), tuple(), '']:
+    '''If null, returns False.'''
+    if variable in [None, 'None', 'NULL', 'Null', (None,), ('NULL',), (), '']:
+        print(variable, "was null.")
+        return False
+    else:
         return True
-    return False
 
 def returnNewID(tableName):
     return incrementNumericPart(getHighestID(retreiveData(tableName)))
 
-def makeTable(tableName, data):
-    c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N\'{tableName}\'")
+def makePrettyTable(tableName, data):
+    # Fetch column names for the table
+    c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'{tableName}'")
     columnNames = c.fetchall()
-    #print([x for x in columnNames])
+    
+    # Create PrettyTable with the column names
     table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
-    #print([x for x in data])
-    table.add_row([x for x in data])
+    
+    # Print data for debugging purposes
+    print('data in makePrettyTable:', data)
+    
+    # Check if data is a single row (tuple or list) or multiple rows (list of tuples/lists)
+    if data:
+        if isinstance(data[0], (tuple, list)):  # Multiple rows case (list of lists/tuples)
+            table.add_rows([x for x in data])
+        else:  # Single row case (tuple or list)
+            table.add_row([x for x in data])
+
+    # Display the table
     print(table)
+    
 
 def viewPendingRequests():
     global current_user_data, current_user_type
@@ -56,15 +91,16 @@ def viewPendingRequests():
         c.execute(f'select * from admin_requests where requestReason = \'{request_sign_up}\'')
         signUpRequests = c.fetchall()
         if len(signUpRequests) > 0:
-            print('Pending signup requests:', signUpRequests)
+            print('Pending signup requests:\n')
+            makePrettyTable('admin_requests', signUpRequests)
         '''        c.execute(f'select * from admin_requests where requestReason = \'{request_promotion}\'')
         promotionRequests = c.fetchall()
         if len(promotionRequests) > 0:
-            print('Pending promotion requests:', promotionRequests)
-        return signUpRequests, promotionRequests'''
+            print('Pending promotion requests:', promotionRequests)'''
+        return signUpRequests
 
 def dealWithPendingRequests():
-    signupReq, promotionReq = viewPendingRequests()
+    signupReq = viewPendingRequests()
     for req in signupReq:
         name = req[2]
         id = returnNewID('admins')
@@ -157,7 +193,8 @@ def makeNewPrescription(returnPCID = True):
         print(f"A prescription already recorded with the same name was found.\n")
         for existingPrescription in existingPrescriptions:
             if existingPrescription[1] == prescription:
-                print("Details are:", existingPrescription)
+                print("Details are:\n")
+                makePrettyTable('prescriptions', existingPrescription)
                 prescriptionID = existingPrescription[0]
     else:
         prescriptionID = returnNewID('prescriptions')
@@ -189,7 +226,7 @@ def updateAppointments(current_user_type):
 
         if len(appointmentsPendingLater) > 0:
             for appointment in appointmentsPendingLater:
-                print(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]}")
+                print(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]} at {convertTime(appointment[-1])}")
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
                 if appointment[6] not in [None, 'None', 'NULL']:
@@ -200,15 +237,15 @@ def updateAppointments(current_user_type):
                     
                     # Compare the times
                     if current_time < appointment_time:
-                        print(f"You have an upcoming appointment at {appointment_time} with Dr. {viewDoctorDetails(appointment[2])[1]}")
+                        print(f"You have an upcoming appointment at {convertTime(appointment_time)} with Dr. {viewDoctorDetails(appointment[2])[1]}")
                     else:
                         #Check for whether the record with same date and time, patientID and doctorID was added to medicalhistory. 
                         #missedRecordConfirm = retreiveData('medicalhistory', conditionNames=['patientID', 'doctorID', 'visitDate', 'time'], conditionValues=[current_user_data[0], appointment[2], str(date.today().isoformat()), appointment_time])
                         c.execute(f"select * from medicalhistory where patientID = '{current_user_data[0]}' and doctorID = '{appointment[2]}' and visitDate = '{date.today().isoformat()}' and time = '{appointment_time}'")
                         missedRecordConfirm = c.fetchall()
-                        if missedRecordConfirm:
+                        if not checkIfNonNull(missedRecordConfirm):
                             if len(missedRecordConfirm) > 0:
-                                print(f"You missed an appointment that was scheduled for {appointment_time}")
+                                print(f"You missed an appointment that was scheduled for {convertTime(appointment_time)}")
                                 log(f'{current_user_data[1]} missed an appointment: {missedRecordConfirm}')
                 else:
                     print(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ")
@@ -237,10 +274,6 @@ def updateAppointments(current_user_type):
                                     log("Succeeded in making appointment!")
                     else:
                         print("Time cannot be chosen in the past.")
-
-
-                    #c.execute("select * from appointments where patientID = '{}' and ")
-
         else:
             print("You have no appointments upcoming today.")
     elif current_user_type == "D":
@@ -258,7 +291,7 @@ def updateAppointments(current_user_type):
                     
                     # Compare the times
                     if current_time < appointment_time:
-                        print(f"You have an upcoming appointment at {appointment_time} with {viewPatientDetails(appointment[1])[1]}")
+                        print(f"You have an upcoming appointment at {convertTime(appointment_time)} with {viewPatientDetails(appointment[1])[1]}")
         else:
             print("No upcoming appointments.")
         #print(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and {date.today().isoformat()} >= appointmentDate")
@@ -275,7 +308,7 @@ def updateAppointments(current_user_type):
                     # Compare the times
                     if current_time > appointment_time:
                         doneAppointments.append(assumedAppointment)
-        print('doneAppointments', doneAppointments)
+        makePrettyTable('appointments', doneAppointments)
         log(f'doneAppointments requested: {doneAppointments}')
         if len(doneAppointments) > 0:
             if debug:
@@ -405,7 +438,8 @@ def make_new_record(ordered_table, name, usertype):
 
             confirm_data = retreiveData('patients', allColumns=True)
 
-            print("Updated patients table\n", confirm_data)
+            #print("Updated patients table\n")
+            #makePrettyTable('patients', confirm_data)
             log(f"Updated patients table: {confirm_data}")
             #c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
             #current_user_data = c.fetchone()
@@ -430,7 +464,7 @@ def make_new_record(ordered_table, name, usertype):
             #confirm_data = c.fetchall()
 
             confirm_data = retreiveData('doctors', allColumns=True)
-            print("Updated doctors table\n", confirm_data)
+            #print("Updated doctors table\n", confirm_data)
             log(f"Updated doctors table: {confirm_data}")
             #c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
             #current_user_data = c.fetchone()
@@ -629,7 +663,7 @@ def login(user_type):
         else:
             cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
             #print(cpassword)
-            if checkIfNonNull(cpassword):
+            if not checkIfNonNull(cpassword):
                 cpassword = cpassword[0]
                 if checkPasswords(cpassword, record[1]):
                     current_user_data = record
@@ -801,7 +835,7 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
                         potentialDoctorBusy = c.fetchall()
                         if len(potentialDoctorBusy) > 0:
                             print("Sorry! The doctor is busy at that time. Please try another time.")
-                            log(f"Doctor already has appointment at that time: {potentialDoctorBusy}")
+                            log(f"Doctor already has appointment at that time: {convertTime(potentialDoctorBusy)}")
                         else:
                             add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
                             if debug:
@@ -868,7 +902,7 @@ def resetMenuOptions(current_user_type):
 all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
 #Doctor's/Patients Panel
 while True:
-    if checkIfNonNull(current_user_data):
+    if not checkIfNonNull(current_user_data):
         start_program()
     #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
@@ -887,12 +921,13 @@ while True:
         if index == 0:
             patientID = (input("Enter patient ID: "))
             data = viewPatientDetails(patientID)
-            print("Requested data:", data)
+            #print("Requested data:", data)
+            makePrettyTable('patients', [data])
         elif index == 1:
             doctorID = (input("Enter doctor ID: "))
             data = viewDoctorDetails(doctorID)
             #print("Requested data:", data)
-            print(makeTable('doctors', data))
+            makePrettyTable('doctors', [data])
         elif index == 2:
             #Make an appointment
             doctorID = input("Enter doctor ID to make appointment to: ")
@@ -917,26 +952,28 @@ while True:
             if historyIndex == 1:
                 recordID = (input("Enter recordID: "))
                 data = viewRecordDetails(current_patient_id, recordID=recordID)
-                print(data)
+                #print(data)
             elif historyIndex == 2:
                 doctorID = (input("Enter doctor ID: "))
                 data = viewRecordDetails(current_patient_id, doctorID=doctorID)
-                print(data)
+                #print(data)
             elif historyIndex == 3:
                 data = viewRecordDetails(current_patient_id, all=True)
-                print(data)
+            makePrettyTable('medicalhistory', data)
         elif index == 4:
             idOrAll = int(input(zampy.make_menu_from_options(['View all prescriptions', 'View by ID'])))
             if idOrAll == 1:
                 data = viewPrescriptions(all=True) #expand to finding by name, and id
-                print(data)
+                #print(data)
+                #makePrettyTable('prescriptions', data)
             elif idOrAll == 2:
                 data = viewPrescriptions(all=False, pID=input("Enter prescription ID: "))
+            makePrettyTable('prescriptions', data)
         elif index == 5:
             #Access medical history of a patient
             patientID = input("Enter patient ID: ")
             data = viewRecordDetails(patientID=patientID, all=True)
-            print(data)
+            makePrettyTable('medicalhistory', data)
         elif index == 6:
             #Access appointments history
             options = ['Upcoming appointments', 'Completed appointments']
@@ -944,12 +981,14 @@ while True:
             if index == 1:
                 c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Scheduled'))
                 data = c.fetchall()
-                print(data) 
+                #print(data) 
+                makePrettyTable('appointments', data)
                 # print(from_db_cursor(c))
             elif index == 2:
                 c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Completed'))
                 data = c.fetchall()
                 print(data)
+                makePrettyTable('appointments', data)
                 # print(from_db_cursor(c))
         elif index == 7:
             dealWithPendingRequests()
@@ -958,7 +997,8 @@ while True:
             table_name = input("Enter table name to access: ")
             c.execute(f'select * from {table_name}')
             data = c.fetchall()
-            print(data)
+            #print(data)
+            makePrettyTable(f'{table_name}', data)
         elif index == 9:
             #Execute custom SQL command
             sql_command = input("Enter sql command:\n")
