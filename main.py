@@ -8,6 +8,9 @@ import pyfiglet
 import os
 from pathlib import Path
 import getpass
+import tkinter as tk
+from tkinter import ttk
+
 
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
@@ -30,7 +33,7 @@ login_file = directory / "creds.dat"
 log_file = directory / 'log.txt'
 
 def checkIfNonNull(variable):
-    if variable not in [None, 'None', 'NULL', 'Null', (None,), ('NULL',)]:
+    if variable not in [None, 'None', 'NULL', 'Null', (None,), ('NULL',), tuple(), '']:
         return True
     return False
 
@@ -54,11 +57,11 @@ def viewPendingRequests():
         signUpRequests = c.fetchall()
         if len(signUpRequests) > 0:
             print('Pending signup requests:', signUpRequests)
-        c.execute(f'select * from admin_requests where requestReason = \'{request_promotion}\'')
+        '''        c.execute(f'select * from admin_requests where requestReason = \'{request_promotion}\'')
         promotionRequests = c.fetchall()
         if len(promotionRequests) > 0:
             print('Pending promotion requests:', promotionRequests)
-        return signUpRequests, promotionRequests
+        return signUpRequests, promotionRequests'''
 
 def dealWithPendingRequests():
     signupReq, promotionReq = viewPendingRequests()
@@ -77,6 +80,22 @@ def dealWithPendingRequests():
         else:
             continue
     #deal with promotionReq
+        '''    for req in promotionReq:
+        name = req[2]
+        id = returnNewID('admins')
+        print(f"Approve pending promotion of {name} as admin:")
+        choice = int(input(zampy.make_menu_from_options()))
+        if choice == 1:
+            #delete from admin_requests
+            c.execute(f'delete from admin_requests where requestID = "{req[0]}";')
+            database.commit()
+            #add new user to credentials and admin table
+            add_value_to_table('admins', ['adminID', 'adminName'], [id, name])
+            existingPassword = retreiveData('credentials', columnNames=['password'], conditionNames=['userID'], conditionValues=[id])
+            if checkIfNonNull(existingPassword):
+                add_value_to_table('credentials', ['userID', 'password'], [existingPassword])
+        else:
+            continue'''
 def log(text):
     file = None
     try:
@@ -301,7 +320,7 @@ def updateAppointments(current_user_type):
 def start_program():
     global current_user_type
     global current_user_data
-
+    #signUpLoginPage()
     try:
         bfile = open(login_file, "rb")
         bfilecontents = pickle.load(bfile)
@@ -813,19 +832,43 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
         else:
             print("Cant choose a date in the past!")
             
-
-
 start_program()
 
 def resetMenuOptions(current_user_type):
-    all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments panel', 'View pending requests', 'Exit'] #also update own info, group doctors by specialization, view pending appointments
-    options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View prescriptions', 'Access appointments panel' if current_user_type == "D" else None, 'View pending requests' if current_user_type == 'A' else None, 'Exit']
+    all_options = ['View a patient\'s details',
+                   'View a doctor\'s details', 
+                   'Make an appointment', 
+                   'Access medical history', 
+                   'View prescriptions', 
+                   'Access medical history of a patient',
+                    'Access appointments panel', 
+                    'View pending requests', 
+                    'View table',
+                    'Execute custom SQL command',
+                    'Log out',
+                    'Log in',
+                    #'Edit data',
+                    'Exit'] #also update own info, group doctors by specialization, view pending appointments
+    options = ['View a patient\'s details' if current_user_type == "D" else None, 
+               'View a doctor\'s details', 
+               'Make an appointment' if current_user_type == "P" else None, 
+               'Access medical history' if current_user_type == "P" else None, 
+               'Access medical history of a patient' if current_user_type == "D" else None, 
+               'View prescriptions', 
+               'Access appointments panel' if current_user_type == "D" else None, 
+               'View pending requests' if current_user_type == 'A' else None, 
+               'View table' if current_user_type == 'A' else None,
+               'Execute custom SQL command' if current_user_type == 'A' else None,
+               #'Edit data' if current_user_type == 'A' else None,
+               'Log out' if current_user_data != None else None,
+               'Log in' if current_user_data == None else None,
+               'Exit']
     options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
     return all_options, options_menu_str, options_dict
 all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
 #Doctor's/Patients Panel
 while True:
-    if current_user_data in [None, 'None', 'NULL']:
+    if checkIfNonNull(current_user_data):
         start_program()
     #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
@@ -911,8 +954,39 @@ while True:
         elif index == 7:
             dealWithPendingRequests()
         elif index == 8:
+            #View table
+            table_name = input("Enter table name to access: ")
+            c.execute(f'select * from {table_name}')
+            data = c.fetchall()
+            print(data)
+        elif index == 9:
+            #Execute custom SQL command
+            sql_command = input("Enter sql command:\n")
+            try:
+                c.execute(sql_command)
+                database.commit()
+            except Exception as e:
+                print(f"Error while running command: {e}")
+                log(f"Error while running command: {e}")
+            else:
+                print('No error in running command.')
+            '''        elif index == 10:
+            #Edit data
+            table_name = input("Enter table name to access: ")
+            table = c.execute(f"select * from {table_name}")
+            if checkIfNonNull(table):
+                '''
+        elif index == 10:
+            #Log out
+            current_user_data = None
+            current_user_type = None
+        elif index == 11:
+            #Log in
+            start_program()
+        elif index == 12:
             print("Thank you for using this program.")
             exit()
         else:
             print("Something went wrong.")
             log(f"Unforeseen error when index was {index}.")
+

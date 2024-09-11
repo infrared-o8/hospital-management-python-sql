@@ -263,7 +263,7 @@ def choose_date():
     # Create a new window for the calendar
     top = tk.Toplevel(root)
     top.title("Choose Date")
-    top.focus()
+    top.focus_force()
     cal = Calendar(top, selectmode='day', date_pattern='y-mm-dd')
     cal.pack(padx=10, pady=10)
 
