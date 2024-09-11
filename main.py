@@ -16,6 +16,8 @@ c = database.cursor()
 current_user_type = None
 current_user_data = None
 
+request_sign_up = "Request to Sign Up"
+request_promotion = 'Request to Promote'
 # Define the path to the local directory
 directory = Path.home() / "HospitalManagement-PythonSQL"  # This creates a folder in the user's home directory
 
@@ -27,6 +29,14 @@ os.makedirs(directory, exist_ok=True)
 login_file = directory / "creds.dat"
 log_file = directory / 'log.txt'
 
+def checkIfNonNull(variable):
+    if variable not in [None, 'None', 'NULL', 'Null', (None,), ('NULL',)]:
+        return True
+    return False
+
+def returnNewID(tableName):
+    return incrementNumericPart(getHighestID(retreiveData(tableName)))
+
 def makeTable(tableName, data):
     c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N\'{tableName}\'")
     columnNames = c.fetchall()
@@ -36,6 +46,37 @@ def makeTable(tableName, data):
     table.add_row([x for x in data])
     print(table)
 
+def viewPendingRequests():
+    global current_user_data, current_user_type
+    if current_user_type == 'A': #confirm its an admin
+        #all signup requests.
+        c.execute(f'select * from admin_requests where requestReason = \'{request_sign_up}\'')
+        signUpRequests = c.fetchall()
+        if len(signUpRequests) > 0:
+            print('Pending signup requests:', signUpRequests)
+        c.execute(f'select * from admin_requests where requestReason = \'{request_promotion}\'')
+        promotionRequests = c.fetchall()
+        if len(promotionRequests) > 0:
+            print('Pending promotion requests:', promotionRequests)
+        return signUpRequests, promotionRequests
+
+def dealWithPendingRequests():
+    signupReq, promotionReq = viewPendingRequests()
+    for req in signupReq:
+        name = req[2]
+        id = returnNewID('admins')
+        print(f"Approve pending sign-up of {name} as admin:")
+        choice = int(input(zampy.make_menu_from_options()))
+        if choice == 1:
+            #delete from admin_requests
+            c.execute(f'delete from admin_requests where requestID = "{req[0]}";')
+            database.commit()
+            #add new user to credentials and admin table
+            add_value_to_table('admins', ['adminID', 'adminName'], [id, name])
+            add_value_to_table('credentials', ['userID'], [id])
+        else:
+            continue
+    #deal with promotionReq
 def log(text):
     file = None
     try:
@@ -45,9 +86,13 @@ def log(text):
         file = open(log_file, "w")
     file.write(f'{str(datetime.now())}: {text}\n')
 
-def checkPasswords(correct_password: str, name: str = "current user", usebcrypt = False) -> bool:
+def askForPassword(name: str = "current user"):
     print(f"Enter password for:\t {name}")
     inpPassword = getpass.getpass()
+    return inpPassword
+
+def checkPasswords(correct_password: str, name: str = "current user", usebcrypt = False) -> bool:
+    inpPassword = askForPassword(name)
     if usebcrypt:
         if bcrypt.checkpw(inpPassword.encode('utf-8'), correct_password):
             return True
@@ -96,7 +141,7 @@ def makeNewPrescription(returnPCID = True):
                 print("Details are:", existingPrescription)
                 prescriptionID = existingPrescription[0]
     else:
-        prescriptionID = incrementNumericPart(getHighestID(retreiveData('prescriptions')))
+        prescriptionID = returnNewID('prescriptions')
         dosage = input("Enter general dosage: ")
         add_value_to_table('prescriptions', ['prescriptionID', 'medication_name', 'dosage'], [prescriptionID, prescription, dosage])
         log(f'New prescription added with: {[prescriptionID, prescription, dosage]}')
@@ -109,10 +154,10 @@ def requestExistingAdminToSignUp(adminName):
     ordered_table = c.fetchall()
     new_request_id = ''
     if len(ordered_table) > 0:
-        new_request_id = f"{incrementNumericPart(getHighestID(ordered_table))}" 
+        new_request_id = f"{returnNewID('admin_requests')}" 
     else:
         new_request_id = 'REQ1'
-    add_value_to_table('admin_requests', ['requestID', 'requestReason', 'signUpRequestName'], [new_request_id, 'Request to Sign Up', adminName])
+    add_value_to_table('admin_requests', ['requestID', 'requestReason', 'signUpRequestName'], [new_request_id, request_sign_up, adminName])
 
 def updateAppointments(current_user_type):
     global current_user_data
@@ -229,14 +274,14 @@ def updateAppointments(current_user_type):
                     confirm = int(input(zampy.make_menu_from_options()))
                     if confirm == 1:
                         #log into medical history
-                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], diagnosis, prescriptionID, 'Completed'])
+                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [returnNewID('medicalhistory'), patientID, doctorID, appointment[3], appointment[6], diagnosis, prescriptionID, 'Completed'])
                         #delete from appointments.
 
                     else:
                         print("Attempting to make a new prescription...")
                         log(f"Attempting to make a new prescription.")
                         pcID = makeNewPrescription()
-                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], diagnosis, pcID, 'Completed'])
+                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [returnNewID('medicalhistory'), patientID, doctorID, appointment[3], appointment[6], diagnosis, pcID, 'Completed'])
                         #delete from appointments.
 
                         #make a new prescription here!
@@ -247,7 +292,7 @@ def updateAppointments(current_user_type):
                     choice = int(input(zampy.make_menu_from_options()))
                     if choice == 1:
                         #log into medical history, 
-                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [incrementNumericPart(getHighestID(retreiveData('medicalhistory'))), patientID, doctorID, appointment[3], appointment[6], 'NULL', 'NULL','Cancelled']) 
+                        add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [returnNewID('medicalhistory'), patientID, doctorID, appointment[3], appointment[6], 'NULL', 'NULL','Cancelled']) 
                         #delete from appointments.
                         c.execute(f"delete from appointments where LOWER(appointmentID) = '{appointment[0].lower()}'")
                         database.commit()
@@ -376,6 +421,31 @@ def make_new_record(ordered_table, name, usertype):
 
             bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
+            '''elif usertype == "A":
+            new_admin_id = f"{incrementNumericPart(getHighestID(ordered_table))}"
+            new_admin_data = [new_admin_id, name]
+
+            #c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
+            #database.commit()
+            new_p = askForPassword()
+            new_p_bytes = new_p.encode('utf-8')
+            add_value_to_table("credentials", ['userid', 'password'], [new_admin_id, new_p])
+            add_value_to_table("admins", ['adminID', 'Name'], new_admin_data)
+
+            #c.execute("select * from doctors")
+            #confirm_data = c.fetchall()
+
+            confirm_data = retreiveData('admins', allColumns=True)
+            print("Updated admins table\n", confirm_data)
+            log(f"Updated admins table: {confirm_data}")
+            #c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
+            #current_user_data = c.fetchone()
+
+            current_user_data = retreiveData("admins", allColumns=True, conditionNames=['adminID'], conditionValues=[new_admin_data[0]], returnAllData=False)
+
+
+            bfile = open(login_file, "wb")
+            pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)'''
 
 def signup(user_type):
     global current_user_data
@@ -443,12 +513,24 @@ def signup(user_type):
             print(f"Username already exists with admin data: {admin_record}!") #add column names - !!
             confirm = input("Do you confirm this is your data? (Y/N): ")
             if confirm in 'Yy':
-                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[doctor_record[0]], returnAllData=False)
-                password = password[0]
-                if checkPasswords(password, admin_record[1]):
-                    current_user_data = admin_record
+                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[admin_record[0]], returnAllData=False)
+                if password:
+                    password = password[0]
+                    if checkPasswords(password, admin_record[1]):
+                        current_user_data = admin_record
+                    else:
+                        incorrectPassword()
                 else:
-                    incorrectPassword()
+                    print("The user was found with no password. Enter new password?")
+                    choice = input(zampy.make_menu_from_options())
+                    if choice == 1:
+                        print("Enter new",end="")
+                        newPassword = askForPassword()
+                        while newPassword != None:
+                            newPassword = askForPassword()
+                        c.execute(f'update credentials set password = "{newPassword}" where userid = "{admin_record[0]}"')
+                    else:
+                        start_program()
             else:
                 print("Would you like to create a new account with this name?")
                 choice = int(input(zampy.make_menu_from_options()))
@@ -527,15 +609,25 @@ def login(user_type):
                 signup(user_type)
         else:
             cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
-            cpassword = cpassword[0]
-            cpasswordbytes = cpassword.encode('utf-8')
-            if checkPasswords(cpassword, record[1]):
-                current_user_data = record
-
-                bfile = open(login_file, "wb")
-                pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
+            #print(cpassword)
+            if checkIfNonNull(cpassword):
+                cpassword = cpassword[0]
+                if checkPasswords(cpassword, record[1]):
+                    current_user_data = record
+                else:
+                    incorrectPassword()
             else:
-                incorrectPassword()
+                print("The user was found with no password. Enter new password?")
+                choice = int(input(zampy.make_menu_from_options()))
+                if choice == 1:
+                    #print("Enter new",end="")
+                    newPassword = askForPassword()
+                    while newPassword == None or newPassword == "":
+                        newPassword = askForPassword()
+                    c.execute(f'update credentials set password = "{newPassword}" where userid = "{record[0]}"')
+                    database.commit()
+                else:
+                    start_program()
 
 def attain_creds(currentUserType):
     if currentUserType == 'P':
@@ -666,7 +758,7 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
         if zampy.checkEmpty(data):
             appointmentID = "A1"
         else:
-            appointmentID = f"{incrementNumericPart(getHighestID(retreiveData('appointments')))}"
+            appointmentID = f"{returnNewID('appointments')}"
         
         #c.execute(f"insert into appointments (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, status) values (%s, %s, %s, %s, %s, %s)", (appointmentID, patientID, doctorID, appointmentDate, appointmentReason, "Scheduled"))
         #timeInput = zampy.choose_time()
@@ -726,8 +818,8 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
 start_program()
 
 def resetMenuOptions(current_user_type):
-    all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments panel', 'Exit'] #also update own info, group doctors by specialization, view pending appointments
-    options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View prescriptions', 'Access appointments panel' if current_user_type == "D" else None, 'Exit']
+    all_options = ['View a patient\'s details', 'View a doctor\'s details', 'Make an appointment', 'Access medical history', 'View prescriptions', 'Access medical history of a patient', 'Access appointments panel', 'View pending requests', 'Exit'] #also update own info, group doctors by specialization, view pending appointments
+    options = ['View a patient\'s details' if current_user_type == "D" else None, 'View a doctor\'s details', 'Make an appointment' if current_user_type == "P" else None, 'Access medical history' if current_user_type == "P" else None, 'Access medical history of a patient' if current_user_type == "D" else None, 'View prescriptions', 'Access appointments panel' if current_user_type == "D" else None, 'View pending requests' if current_user_type == 'A' else None, 'Exit']
     options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
     return all_options, options_menu_str, options_dict
 all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
@@ -817,6 +909,8 @@ while True:
                 print(data)
                 # print(from_db_cursor(c))
         elif index == 7:
+            dealWithPendingRequests()
+        elif index == 8:
             print("Thank you for using this program.")
             exit()
         else:
