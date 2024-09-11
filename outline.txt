@@ -59,9 +59,10 @@ details to medical history for patient.
 
 Prescriptions table is pre-made.
 
-[doctors can log in. 
+doctors can log in. 
+doctors should be able to view any pending Appointments
 
-doctors should be able to view any pending appointments, and] - not sure
+admins can log in, view any table, add/delete/edit records. no options for patients and doctors should be available to them. be able to run custom queries.
 
 links:
 https://docs.python.org/3/library/datetime.html

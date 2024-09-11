@@ -60,17 +60,27 @@ def incorrectPassword():
     print("Incorrect password!")
     #do something more here!
 def incrementNumericPart(text):
-    number = int(text[1:]) + 1
-    return text[0] + str(number)
+    number = (text[1:])
+    x = 0
+    while not number.isnumeric():
+        x += 1
+        number = (text[1+x:])
+    number = int(number) + 1
+    return text[0:1+x] + str(number)
 
 def getHighestID(ordered_table):
     highestNum = 0
     #highestID = None
     for record in ordered_table:
-        currentNum = int(record[0][1:])
+        currentNum = (record[0][1:])
+        x = 0
+        while not currentNum.isnumeric():
+            x += 1
+            currentNum = (record[0][(1 + x):])
+        currentNum = int(currentNum)
         if currentNum > highestNum:
             highestNum = currentNum
-    return ordered_table[0][0][0] + str(highestNum)  
+    return ordered_table[0][0][0:(1+x)] + str(highestNum)  
 
 def makeNewPrescription(returnPCID = True):
     prescription = input("Enter prescription name: ")
@@ -92,6 +102,17 @@ def makeNewPrescription(returnPCID = True):
         log(f'New prescription added with: {[prescriptionID, prescription, dosage]}')
     if returnPCID:
         return prescriptionID
+
+def requestExistingAdminToSignUp(adminName):
+    #c.execute(f"insert into admin_requests values('{}', 'Request to Sign Up', ')")
+    c.execute('select * from admin_requests')
+    ordered_table = c.fetchall()
+    new_request_id = ''
+    if len(ordered_table) > 0:
+        new_request_id = f"{incrementNumericPart(getHighestID(ordered_table))}" 
+    else:
+        new_request_id = 'REQ1'
+    add_value_to_table('admin_requests', ['requestID', 'requestReason', 'signUpRequestName'], [new_request_id, 'Request to Sign Up', adminName])
 
 def updateAppointments(current_user_type):
     global current_user_data
@@ -278,14 +299,16 @@ def start_program():
                 incorrectPassword()
         else:
             try:
-                print("Using as patient/doctor?\n")
-                user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor'])))
+                print("Using as:\n")
+                user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
                 if user == 1:
                     #logging in as patient
                     current_user_type = 'P'
                 elif user == 2:
                     #logging in as doctor
                     current_user_type = 'D'
+                elif user == 3:
+                    current_user_type = 'A'
                 else:
                     print("Something went wrong. Try again...\n")
                     start_program()
@@ -410,6 +433,35 @@ def signup(user_type):
             print("Doctor record doesn't exist! Making new record...")
             #doesnt exist, make a new record.
             make_new_record(ordered_doctor_table, doctor_name, user_type)
+    elif user_type == 'A':
+        admin_name = input("Enter admin name: ")
+        #check if it already exists in doctors table.
+        c.execute('select * FROM admins ORDER BY adminID') ##orderby functionality here!
+        ordered_admin_table = c.fetchall()
+        (aExists, admin_record) = zampy.check_record_exists(admin_name, 1, ordered_admin_table)
+        if aExists:
+            print(f"Username already exists with admin data: {admin_record}!") #add column names - !!
+            confirm = input("Do you confirm this is your data? (Y/N): ")
+            if confirm in 'Yy':
+                password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[doctor_record[0]], returnAllData=False)
+                password = password[0]
+                if checkPasswords(password, admin_record[1]):
+                    current_user_data = admin_record
+                else:
+                    incorrectPassword()
+            else:
+                print("Would you like to create a new account with this name?")
+                choice = int(input(zampy.make_menu_from_options()))
+                if choice == 1:
+                    #make_new_record(ordered_admin_table, admin_name, user_type)
+                    requestExistingAdminToSignUp(admin_name)
+        else:
+            print("Admin record doesn't exist! Making new record...")
+            requestExistingAdminToSignUp(admin_name)
+
+            #doesnt exist, make a new record.
+            #make_new_record(ordered_doctor_table, doctor_name, user_type)
+
 
 def login(user_type):
     global current_user_data
@@ -465,7 +517,25 @@ def login(user_type):
                 pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
             else:
                 incorrectPassword()
+    elif user_type == 'A':
+        requested_id = (input("Enter admin ID: "))
+        record = retreiveData("admins", conditionNames=['adminID'], conditionValues=[requested_id], returnAllData=False)
 
+        if record is None:
+            requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
+            if requSignUp in 'Yy':
+                signup(user_type)
+        else:
+            cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
+            cpassword = cpassword[0]
+            cpasswordbytes = cpassword.encode('utf-8')
+            if checkPasswords(cpassword, record[1]):
+                current_user_data = record
+
+                bfile = open(login_file, "wb")
+                pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
+            else:
+                incorrectPassword()
 
 def attain_creds(currentUserType):
     if currentUserType == 'P':
@@ -478,6 +548,14 @@ def attain_creds(currentUserType):
             login(current_user_type)
     elif currentUserType == 'D':
         print("Log in or sign up as doctor?")
+        useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
+        if useridentify == 1:
+            signup(current_user_type)
+            
+        elif useridentify == 2:
+            login(current_user_type)
+    elif current_user_type == 'A':
+        print("Log in or sign up as admin?")
         useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
         if useridentify == 1:
             signup(current_user_type)
@@ -655,7 +733,7 @@ def resetMenuOptions(current_user_type):
 all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
 #Doctor's/Patients Panel
 while True:
-    if current_user_data == None:
+    if current_user_data in [None, 'None', 'NULL']:
         start_program()
     #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
