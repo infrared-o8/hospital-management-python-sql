@@ -54,9 +54,27 @@ def convertTime(rawTime):
 message_types = ['success', 'error', 'ask', 'fatalerror', 
                  'preheader', 'info', 'debug']
 
+init(autoreset=True)  # Initializes colorama for cross-platform compatibility
+
+# Mapping message types to colors
+MESSAGE_STYLES = {
+    'success': {'symbol': '✅', 'color': 'light_green'},
+    'error': {'symbol': '❌', 'color': 'light_red'},
+    'ask': {'symbol': '🔴', 'color': 'light_cyan'},
+    'fatalerror': {'symbol': '💀', 'color': 'red'},
+    'preheader': {'symbol': '🟡', 'color': 'yellow'},
+    'info': {'symbol': 'ℹ️', 'color': 'blue'},
+    'debug': {'symbol': '🐞', 'color': 'magenta'}
+}
+
 def colorify(message, type, end=False):
-
-
+    style = MESSAGE_STYLES.get(type, {'symbol': '❔', 'color': 'white'})
+    symbol = style['symbol']
+    color = style['color']
+    if end == False:
+        print(colored(f"[{symbol}]\t{message}", color))
+    else:
+        print(colored(f"[{symbol}]\t{message}", color), end="")
 def checkIfNonNull(variable):
     '''If null, returns False.'''
     if variable in [None, 'None', 'NULL', 'Null', (None,), ('NULL',), (), '', [], {}]:
@@ -806,7 +824,7 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
         colorify("Received no tableName.", 'error')
         #return None
     if debug:
-        colorify("Final commmand:", command, 'debug')
+        colorify(f"Final commmand: {command}", 'debug')
         log(f"Final commmand: {command}")
 
     try:
@@ -867,7 +885,7 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
                 else:
                     colorify("Time cannot be chosen in the past.", 'error')
             elif appointmentDate > todayStr:
-                colorify("appointmentdate chosen was after today!", 'error')
+                colorify("appointmentdate chosen was after today!", 'debug')
                 #ensure time doesnt overlap.
                 c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{appointmentDate}' = appointmentDate and appointmentTime = '{appointmentTime}'")
                 potentialPatientAlreadyHasAppointment = c.fetchall()
@@ -889,7 +907,6 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
         else:
             colorify("Cant choose a date in the past!", 'error')
             
-start_program()
 
 def resetMenuOptions(current_user_type):
     all_options = ['View a patient\'s details',
@@ -924,6 +941,14 @@ def resetMenuOptions(current_user_type):
     return all_options, options_menu_str, options_dict
 all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
 #Doctor's/Patients Panel
+
+
+result = pyfiglet.figlet_format('Hospital Management System', font='standard')
+print(colored(result, 'yellow'))
+
+start_program()
+
+
 while True:
     if checkIfNonNull(current_user_data) == False or checkIfNonNull(current_user_type) == False:
         start_program()
@@ -957,7 +982,17 @@ while True:
                 makePrettyTable('doctors', [data])
             elif index == 2:
                 #Make an appointment
-                doctorID = input("Enter doctor ID to make appointment to: ")
+                doctorName = input("Enter doctor name to make appointment to: ")
+                doctorID = None
+                c.execute(f'select * from doctors where LOWER(name) = "{doctorName.lower()}"')
+                possibleDoctorIDs = c.fetchall()
+                if possibleDoctorIDs and checkIfNonNull(possibleDoctorIDs) == True:
+                    if len(possibleDoctorIDs) > 1:
+                        colorify('Choose doctor:', 'ask')
+                        choice = int(input(zampy.make_menu_from_options(possibleDoctorIDs)))
+                        doctorID = possibleDoctorIDs[choice-1][0]
+                    else:
+                        doctorID = possibleDoctorIDs[0][0]
                 #appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
                 appointmentDate = zampy.choose_date()
                 appointmentTime = zampy.choose_time()
