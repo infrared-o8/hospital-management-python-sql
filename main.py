@@ -1,16 +1,16 @@
-import mysql.connector
-from datetime import datetime, date
+import mysql.connector #sql
+from datetime import datetime, date #utilities
 import zampy
-from prettytable import PrettyTable, from_db_cursor
-import pickle
-import bcrypt
-import pyfiglet
-import os
-from pathlib import Path
-import getpass
-import tkinter as tk
-from tkinter import ttk
+from prettytable import PrettyTable, from_db_cursor #utilities
+import pickle #utilities
+import bcrypt #password
+import os #login_file destination
+from pathlib import Path #login_file destination
+import getpass #password
 
+from termcolor import colored #text 
+from colorama import init #text
+import pyfiglet #text
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
 #c = database.cursor(buffered=True)
@@ -51,10 +51,17 @@ def convertTime(rawTime):
     # Return formatted time
     return f"{hour}:{minutes} {period}"
 
+message_types = ['success', 'error', 'ask', 'fatalerror', 
+                 'preheader', 'info', 'debug']
+
+def colorify(message, type, end=False):
+
+
 def checkIfNonNull(variable):
     '''If null, returns False.'''
     if variable in [None, 'None', 'NULL', 'Null', (None,), ('NULL',), (), '', [], {}]:
-        print(variable, "was null.")
+        if debug:
+            colorify(f"{variable} was null.", 'debug')
         return False
     else:
         return True
@@ -63,24 +70,25 @@ def returnNewID(tableName):
     return incrementNumericPart(getHighestID(retreiveData(tableName)))
 
 def makePrettyTable(tableName, data):
-    # Fetch column names for the table
+    # fetch column names for the table
     c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'{tableName}'")
     columnNames = c.fetchall()
     
-    # Create PrettyTable with the column names
+    #create PrettyTable with the column names
     table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
     
-    # Print data for debugging purposes
-    print('data in makePrettyTable:', data)
+    #print data for debugging purposes
+    if debug:
+        colorify(f'data in makePrettyTable: {data}', 'debug')
     
-    # Check if data is a single row (tuple or list) or multiple rows (list of tuples/lists)
+    #check if data is a single row (tuple or list) or multiple rows (list of tuples/lists)
     if data and checkIfNonNull(data) == True:
         if isinstance(data[0], (tuple, list)):  # Multiple rows case (list of lists/tuples)
             table.add_rows([x for x in data])
-        else:  # Single row case (tuple or list)
+        else:  #single row case (tuple or list)
             table.add_row([x for x in data])
 
-    # Display the table
+    # raw display the table
     print(table)
     
 
@@ -91,7 +99,7 @@ def viewPendingRequests():
         c.execute(f'select * from admin_requests where requestReason = \'{request_sign_up}\'')
         signUpRequests = c.fetchall()
         if len(signUpRequests) > 0:
-            print('Pending signup requests:\n')
+            colorify('Pending signup requests:\n', 'preheader')
             makePrettyTable('admin_requests', signUpRequests)
         '''        c.execute(f'select * from admin_requests where requestReason = \'{request_promotion}\'')
         promotionRequests = c.fetchall()
@@ -104,7 +112,7 @@ def dealWithPendingRequests():
     for req in signupReq:
         name = req[2]
         id = returnNewID('admins')
-        print(f"Approve pending sign-up of {name} as admin:")
+        colorify(f"Approve pending sign-up of {name} as admin:", 'ask')
         choice = int(input(zampy.make_menu_from_options()))
         if choice == 1:
             #delete from admin_requests
@@ -137,12 +145,12 @@ def log(text):
     try:
         file = open(log_file, 'a')
     except Exception as e:
-        print("Error while trying to open log_file:", e)
+        colorify(f"Error while trying to open log_file: {e}", 'error')
         file = open(log_file, "w")
     file.write(f'{str(datetime.now())}: {text}\n')
 
 def askForPassword(name: str = "current user"):
-    print(f"Enter password for:\t {name}")
+    colorify(f"Enter password for:\t {name}", 'ask')
     inpPassword = getpass.getpass()
     return inpPassword
 
@@ -157,7 +165,7 @@ def checkPasswords(correct_password: str, name: str = "current user", usebcrypt 
     return False
 
 def incorrectPassword():
-    print("Incorrect password!")
+    colorify("Incorrect password!", 'fatalerror')
     #do something more here!
 def incrementNumericPart(text):
     number = (text[1:])
@@ -190,10 +198,10 @@ def makeNewPrescription(returnPCID = True):
     existingPrescriptions = c.fetchall()
     if len(existingPrescriptions) > 0:
         #exists already!
-        print(f"A prescription already recorded with the same name was found.\n")
+        colorify(f"A prescription already recorded with the same name was found.\n", 'info')
         for existingPrescription in existingPrescriptions:
             if existingPrescription[1] == prescription:
-                print("Details are:\n")
+                colorify("Details are:\n", 'info')
                 makePrettyTable('prescriptions', existingPrescription)
                 prescriptionID = existingPrescription[0]
     else:
@@ -214,7 +222,7 @@ def requestExistingAdminToSignUp(adminName):
     else:
         new_request_id = 'REQ1'
     add_value_to_table('admin_requests', ['requestID', 'requestReason', 'signUpRequestName'], [new_request_id, request_sign_up, adminName])
-
+    colorify(f'Successfully requested for the sign-up of {adminName}', 'Success')
 def updateAppointments(current_user_type):
     global current_user_data
     if current_user_type == "P":
@@ -226,7 +234,7 @@ def updateAppointments(current_user_type):
 
         if len(appointmentsPendingLater) > 0:
             for appointment in appointmentsPendingLater:
-                print(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]} at {convertTime(appointment[-1])}")
+                colorify(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]} at {convertTime(appointment[-1])}", 'info')
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
                 if appointment[6] not in [None, 'None', 'NULL']:
@@ -237,7 +245,7 @@ def updateAppointments(current_user_type):
                     
                     # Compare the times
                     if current_time < appointment_time:
-                        print(f"You have an upcoming appointment at {convertTime(appointment_time)} with Dr. {viewDoctorDetails(appointment[2])[1]}")
+                        colorify(f"You have an upcoming appointment at {convertTime(appointment_time)} with Dr. {viewDoctorDetails(appointment[2])[1]}", 'info')
                     else:
                         #Check for whether the record with same date and time, patientID and doctorID was added to medicalhistory. 
                         #missedRecordConfirm = retreiveData('medicalhistory', conditionNames=['patientID', 'doctorID', 'visitDate', 'time'], conditionValues=[current_user_data[0], appointment[2], str(date.today().isoformat()), appointment_time])
@@ -245,10 +253,10 @@ def updateAppointments(current_user_type):
                         missedRecordConfirm = c.fetchall()
                         if checkIfNonNull(missedRecordConfirm) == True:
                             if len(missedRecordConfirm) > 0:
-                                print(f"You missed an appointment that was scheduled for {convertTime(appointment_time)}")
+                                colorify(f"You missed an appointment that was scheduled for {convertTime(appointment_time)}", 'error')
                                 log(f'{current_user_data[1]} missed an appointment: {missedRecordConfirm}')
                 else:
-                    print(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ")
+                    colorify(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ", 'ask')
                     timeInput = zampy.choose_time()
                     timeDateTime = datetime.strptime(timeInput, "%H:%M").time()
                     #check if the patient has another appointment at chosen time
@@ -260,22 +268,22 @@ def updateAppointments(current_user_type):
                         c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate and appointmentTime = '{appointmentTime}'")
                         potentialPatientAlreadyHasAppointment = c.fetchall()
                         if len(potentialPatientAlreadyHasAppointment) > 0:
-                            print("You already have an appointment at that time!")
+                            colorify("You already have an appointment at that time!", 'error')
                         else:
                             #check if doctor has another appointment at chosen time
                             c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}'")
                             potentialDoctorBusy = c.fetchall()
                             if len(potentialDoctorBusy) > 0:
-                                print("Sorry! The doctor is busy at that time. Please try another time.")
+                                colorify("Sorry! The doctor is busy at that time. Please try another time.", 'error')
                             else:
                                 add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointment[0], patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
                                 if debug:
-                                    print("Succeeded in making appointment!")
+                                    colorify("Succeeded in making appointment!", 'success')
                                     log("Succeeded in making appointment!")
                     else:
-                        print("Time cannot be chosen in the past.")
+                        colorify("Time cannot be chosen in the past.", 'error')
         else:
-            print("You have no appointments upcoming today.")
+            colorify("You have no appointments upcoming today.", 'info')
     elif current_user_type == "D":
         if current_user_data:
             doctorID = current_user_data[0]
@@ -297,9 +305,9 @@ def updateAppointments(current_user_type):
                     
                     # Compare the times
                     if current_time < appointment_time:
-                        print(f"You have an upcoming appointment at {convertTime(appointment_time)} with {viewPatientDetails(appointment[1])[1]}")
+                        colorify(f"You have an upcoming appointment at {convertTime(appointment_time)} with {viewPatientDetails(appointment[1])[1]}", 'info')
         else:
-            print("No upcoming appointments today.")
+            colorify("No upcoming appointments today.", 'info')
         #print(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and {date.today().isoformat()} >= appointmentDate")
         c.execute(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and '{date.today().isoformat()}' >= appointmentDate")
         assumedDoneAppointments = c.fetchall()
@@ -321,17 +329,17 @@ def updateAppointments(current_user_type):
         log(f'doneAppointments requested: {doneAppointments}')
         if len(doneAppointments) > 0:
             if debug:
-                print(len(doneAppointments), "completed appointments found in appointments table. attempting to move them to medicalhistory...")
+                colorify(f"{len(doneAppointments)} completed appointments found in appointments table. attempting to move them to medicalhistory...", 'debug')
                 log(f"{len(doneAppointments), } completed appointments found in appointments table. attempting to move them to medicalhistory...")
             for appointment in doneAppointments:
                 patientID = appointment[1]
                 patientName = viewPatientDetails(patientID)[1]
-                print(f"Has the appointment scheduled with {patientName} been completed?")
+                colorify(f"Has the appointment scheduled with {patientName} been completed?", 'ask')
                 choice = int(input(zampy.make_menu_from_options()))
                 if choice == 1:
                     diagnosis = input("Enter diagnosis: ")
                     prescriptionID = input("Enter prescriptionID: ")
-                    print(f"Is this the prescription: {viewPrescriptions(prescriptionID,False)}?")
+                    colorify(f"Is this the prescription: {viewPrescriptions(prescriptionID,False)}?", 'ask')
                     confirm = int(input(zampy.make_menu_from_options()))
                     if confirm == 1:
                         #log into medical history
@@ -339,8 +347,9 @@ def updateAppointments(current_user_type):
                         #delete from appointments.
 
                     else:
-                        print("Attempting to make a new prescription...")
-                        log(f"Attempting to make a new prescription.")
+                        if debug:
+                            colorify("Attempting to make a new prescription...", 'debug')
+                            log(f"Attempting to make a new prescription.")
                         pcID = makeNewPrescription()
                         add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [returnNewID('medicalhistory'), patientID, doctorID, appointment[3], appointment[6], diagnosis, pcID, 'Completed'])
                         #delete from appointments.
@@ -349,7 +358,7 @@ def updateAppointments(current_user_type):
                     c.execute(f"delete from appointments where LOWER(appointmentID) = '{appointment[0].lower()}'")
                     database.commit()
                 else:
-                    print("Was the appointment cancelled?")
+                    colorify("Was the appointment cancelled?", 'ask')
                     choice = int(input(zampy.make_menu_from_options()))
                     if choice == 1:
                         #log into medical history, 
@@ -370,42 +379,45 @@ def start_program():
         found_user_data = bfilecontents[1]
         found_user_password = bfilecontents[2]
     except Exception as e:
-        print("Some error occured while trying to access existing login-file:", e)
-        log(f"Some error occured while trying to access existing login-file: {e}.\nProceeding to normal login.")
-        print("Proceeding to normal login...")
+        colorify(f"Some error occured while trying to access existing login-file: {e}", 'error')
+        if debug:
+            log(f"Some error occured while trying to access existing login-file: {e}.\nProceeding to normal login.")
+        colorify("Proceeding to normal login...", 'error')
         try:
-            print("Using as:\n")
-            user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor'])))
+            colorify("Using as:\n", 'ask')
+            user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
             if user == 1:
                 #logging in as patient
                 current_user_type = 'P'
             elif user == 2:
                 #logging in as doctor
                 current_user_type = 'D'
+            elif user == 3:
+                current_user_type = 'A'
             else:
-                print("Something went wrong. Try again...\n")
+                colorify("Something went wrong. Try again...\n", 'error')
                 start_program()
         except ValueError:
-            print("Input was of incorrect datatype. Try again...\n")
+            colorify("Input was of incorrect datatype. Try again...\n", 'error')
             start_program()
         else:
             attain_creds(current_user_type)
     else:
         name = bfilecontents[1][1]
-        print("Found an existing login file for", name, "\nConfirm login with these credentials?")
+        colorify(f"Found an existing login file for {name}. Confirm login with these credentials?", 'ask')
         confirmLogin = int(input(zampy.make_menu_from_options()))
         if confirmLogin == 1:
             #print("found)user_password", found_user_password)
             if checkPasswords(found_user_password, name, usebcrypt=True):
                 current_user_type = bfilecontents[0]
                 current_user_data = bfilecontents[1]
-                print("Succesfully logged in as", current_user_data[1])
+                colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                 
             else:
                 incorrectPassword()
         else:
             try:
-                print("Using as:\n")
+                colorify("Using as:\n", 'ask')
                 user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
                 if user == 1:
                     #logging in as patient
@@ -416,10 +428,10 @@ def start_program():
                 elif user == 3:
                     current_user_type = 'A'
                 else:
-                    print("Something went wrong. Try again...\n")
+                    colorify("Something went wrong. Try again...\n", 'error')
                     start_program()
             except ValueError:
-                print("Input was of incorrect datatype. Try again...\n")
+                colorify("Input was of incorrect datatype. Try again...\n", 'error')
                 start_program()
             else:
                 attain_creds(current_user_type)
@@ -435,7 +447,7 @@ def make_new_record(ordered_table, name, usertype):
             new_patient_data = [new_patient_id, name]
             #print(new_patient_id)
             #c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
-            print("Type a new ", end="")
+            colorify("Type a new ", 'ask',end=True)
             new_p = getpass.getpass()
             new_p_bytes = new_p.encode('utf-8')
             add_value_to_table("credentials", ['userid', 'password'], [new_patient_id, new_p])
@@ -463,7 +475,7 @@ def make_new_record(ordered_table, name, usertype):
 
             #c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
             #database.commit()
-            print("Type a new ", end="")
+            colorify("Type a new ", 'ask',end=True)
             new_p = getpass.getpass()
             new_p_bytes = new_p.encode('utf-8')
             add_value_to_table("credentials", ['userid', 'password'], [new_doctor_id, new_p])
@@ -522,7 +534,7 @@ def signup(user_type):
 
         (pExists, patient_record) = zampy.check_record_exists(patient_name, 1, ordered_patient_table)
         if pExists:
-            print(f"Username already exists with patient data: {patient_record}!") #add column names - !!
+            colorify(f"Username already exists with patient data: {patient_record}!", 'error') #add column names - !!
             confirm = input("Do you confirm this is your data? (Y/N): ") #add password protection here
             if confirm in 'Yy':
                 password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[patient_record[0]], returnAllData=False)
@@ -532,12 +544,12 @@ def signup(user_type):
                 else:
                     incorrectPassword()
             else:
-                print("Would you like to create a new account with this name?")
+                colorify("Would you like to create a new account with this name?", 'ask')
                 choice = int(input(zampy.make_menu_from_options()))
                 if choice == 1:
                     make_new_record(ordered_patient_table, patient_name, user_type)
         else:
-            print("Patient record doesn't exist! Making new record...")
+            colorify("Patient record doesn't exist! Making new record...", 'info')
             #doesnt exist, make a new record.
             make_new_record(ordered_patient_table, patient_name, user_type)
     elif user_type == "D":
@@ -547,7 +559,7 @@ def signup(user_type):
         ordered_doctor_table = c.fetchall()
         (dExists, doctor_record) = zampy.check_record_exists(doctor_name, 1, ordered_doctor_table)
         if dExists:
-            print(f"Username already exists with doctor data: {doctor_record}!") #add column names - !!
+            colorify(f"Username already exists with doctor data: {doctor_record}!", 'error') #add column names - !!
             confirm = input("Do you confirm this is your data? (Y/N): ")
             if confirm in 'Yy':
                 password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[doctor_record[0]], returnAllData=False)
@@ -557,12 +569,12 @@ def signup(user_type):
                 else:
                     incorrectPassword()
             else:
-                print("Would you like to create a new account with this name?")
+                colorify("Would you like to create a new account with this name?", 'ask')
                 choice = int(input(zampy.make_menu_from_options()))
                 if choice == 1:
                     make_new_record(ordered_doctor_table, doctor_name, user_type)
         else:
-            print("Doctor record doesn't exist! Making new record...")
+            colorify("Doctor record doesn't exist! Making new record...", 'info')
             #doesnt exist, make a new record.
             make_new_record(ordered_doctor_table, doctor_name, user_type)
     elif user_type == 'A':
@@ -572,11 +584,11 @@ def signup(user_type):
         ordered_admin_table = c.fetchall()
         (aExists, admin_record) = zampy.check_record_exists(admin_name, 1, ordered_admin_table)
         if aExists:
-            print(f"Username already exists with admin data: {admin_record}!") #add column names - !!
+            colorify(f"Username already exists with admin data: {admin_record}!", 'error') #add column names - !!
             confirm = input("Do you confirm this is your data? (Y/N): ")
             if confirm in 'Yy':
                 password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[admin_record[0]], returnAllData=False)
-                print('password:', password)
+                #print('password:', password)
                 if password and checkIfNonNull(password) == True:
                     password = password[0]
                     if checkPasswords(password, admin_record[1]):
@@ -584,10 +596,10 @@ def signup(user_type):
                     else:
                         incorrectPassword()
                 else:
-                    print("The user was found with no password. Enter new password?")
+                    colorify("The user was found with no password. Enter new password?", 'ask')
                     choice = input(zampy.make_menu_from_options())
                     if choice == 1:
-                        print("Enter new",end="")
+                        colorify("Type a new ", 'ask',end=True)
                         newPassword = askForPassword()
                         while newPassword != None:
                             newPassword = askForPassword()
@@ -595,13 +607,13 @@ def signup(user_type):
                     else:
                         start_program()
             else:
-                print("Would you like to create a new account with this name?")
+                colorify("Would you like to create a new account with this name?", 'ask')
                 choice = int(input(zampy.make_menu_from_options()))
                 if choice == 1:
                     #make_new_record(ordered_admin_table, admin_name, user_type)
                     requestExistingAdminToSignUp(admin_name)
         else:
-            print("Admin record doesn't exist! Making new record...")
+            colorify("Admin record doesn't exist! Making new record...", 'info')
             requestExistingAdminToSignUp(admin_name)
 
             #doesnt exist, make a new record.
@@ -680,7 +692,7 @@ def login(user_type):
                 else:
                     incorrectPassword()
             else:
-                print("The user was found with no password. Enter new password?")
+                colorify("The user was found with no password. Enter new password?", 'ask')
                 choice = int(input(zampy.make_menu_from_options()))
                 if choice == 1:
                     #print("Enter new",end="")
@@ -694,7 +706,7 @@ def login(user_type):
 
 def attain_creds(currentUserType):
     if currentUserType == 'P':
-        print("Log in or sign up as patient?")
+        colorify("Log in or sign up as patient?", 'ask')
         useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
         if useridentify == 1:
             signup(current_user_type)
@@ -702,7 +714,7 @@ def attain_creds(currentUserType):
         elif useridentify == 2:
             login(current_user_type)
     elif currentUserType == 'D':
-        print("Log in or sign up as doctor?")
+        colorify("Log in or sign up as doctor?", 'ask')
         useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
         if useridentify == 1:
             signup(current_user_type)
@@ -710,7 +722,7 @@ def attain_creds(currentUserType):
         elif useridentify == 2:
             login(current_user_type)
     elif current_user_type == 'A':
-        print("Log in or sign up as admin?")
+        colorify("Log in or sign up as admin?", 'ask')
         useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
         if useridentify == 1:
             signup(current_user_type)
@@ -791,16 +803,16 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
                 command += " AND"
         command += ";"
     else:
-        print("Received no tableName.")
+        colorify("Received no tableName.", 'error')
         #return None
     if debug:
-        print("Final commmand:", command)
+        colorify("Final commmand:", command, 'debug')
         log(f"Final commmand: {command}")
 
     try:
         c.execute(command)
     except Exception as e:
-        print("Error while trying to retrieve data:", e)
+        colorify(f"Error while trying to retrieve data: {e}",'debug')
         log(f"Error while trying to retrieve data: {e}")
         return None
     else:
@@ -830,36 +842,37 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
         todayStr = str(datetime.today().date())
         if appointmentDate >= todayStr: #check if the appointmentDate is today. If it is, 
             if appointmentDate == todayStr:
-                #print("appointmentdate chosen was today!")
+                if debug:
+                    colorify("appointmentdate chosen was today!", 'debug')
                 log("appointmentdate chosen was today!")
                 #ensure time doesnt overlap.
                 if appointDateTimeFormat > datetime.now().time(): #check if its not in the past of today.
                     c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate and appointmentTime = '{appointmentTime}'")
                     potentialPatientAlreadyHasAppointment = c.fetchall()
                     if len(potentialPatientAlreadyHasAppointment) > 0:
-                        print("You already have an appointment at that time!")
+                        colorify("You already have an appointment at that time!", 'error')
                         log(f"You already have an appointment at that time: {potentialPatientAlreadyHasAppointment}")
                     else:
                         #check if doctor has another appointment at chosen time
                         c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and '{date.today().isoformat()}' = appointmentDate")
                         potentialDoctorBusy = c.fetchall()
                         if len(potentialDoctorBusy) > 0:
-                            print("Sorry! The doctor is busy at that time. Please try another time.")
+                            colorify("Sorry! The doctor is busy at that time. Please try another time.", 'error')
                             log(f"Doctor already has appointment at that time: {convertTime(potentialDoctorBusy)}")
                         else:
                             add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
                             if debug:
-                                print("Succeeded in making appointment!")
+                                colorify("Succeeded in making appointment!", 'success')
                                 log('Succeeded in making appointment!')
                 else:
-                    print("Time cannot be chosen in the past.")
+                    colorify("Time cannot be chosen in the past.", 'error')
             elif appointmentDate > todayStr:
-                print("appointmentdate chosen was after today!")
+                colorify("appointmentdate chosen was after today!", 'error')
                 #ensure time doesnt overlap.
                 c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{appointmentDate}' = appointmentDate and appointmentTime = '{appointmentTime}'")
                 potentialPatientAlreadyHasAppointment = c.fetchall()
                 if len(potentialPatientAlreadyHasAppointment) > 0:
-                    print("You already have an appointment at that time!")
+                    colorify("You already have an appointment at that time!", 'error')
                 else:
                     #check if doctor has another appointment at chosen time
                     c.execute(f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and appointmentDate = '{appointmentDate}'")
@@ -867,14 +880,14 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
                     #print("command: ", f"select * from appointments where doctorID = '{doctorID}' and appointmentTime = '{appointmentTime}' and appointmentDate = '{appointmentDate}'")
                     #print("potentialDoctorBusy: ", potentialDoctorBusy)
                     if len(potentialDoctorBusy) > 0:
-                        print("Sorry! The doctor is busy at that time. Please try another time.")
+                        colorify("Sorry! The doctor is busy at that time. Please try another time.", 'error')
                     else:
                         add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
                         if debug:
-                            print("Succeeded in making appointment!")
+                            colorify("Succeeded in making appointment!", 'success')
                             log("Succeeded in making appointment!")
         else:
-            print("Cant choose a date in the past!")
+            colorify("Cant choose a date in the past!", 'error')
             
 start_program()
 
@@ -917,19 +930,19 @@ while True:
     #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     updateAppointments(current_user_type)
-    print('Account:\t', current_user_data)
+    colorify(f'Account: {current_user_data}', 'info')
     log(f"Account used: {current_user_type}")
-    print("Enter action: ")
+    colorify("Enter action: ", 'ask')
     try:
         tempIndex = int(input(options_menu_str))
         action = options_dict[tempIndex]
     except ValueError:
-        print("Enter data of correct data-type.")
+        colorify("Enter data of correct datatype.", 'error')
     else:
         try:
             index = all_options.index(action)
         except Exception as e:
-            print(f"Error occured:", e)
+            colorify(f"Error occured: {e}", 'error')
             log(f'Error occured while trying to read index: {e}')
         else:
             if index == 0:
@@ -1001,7 +1014,7 @@ while True:
                 elif index == 2:
                     c.execute("SELECT * FROM medicalhistory WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Completed'))
                     data = c.fetchall()
-                    print(data)
+                    #print(data)
                     makePrettyTable('medicalhistory', data)
                     # print(from_db_cursor(c))
             elif index == 7:
@@ -1024,14 +1037,14 @@ while True:
                             tablename = sql_command.split(' ')[3]
                             makePrettyTable(tablename, data)
                         except Exception as e:
-                            print("Couldn't make table from given data.")
+                            colorify("Couldn't make table from given data.", 'error')
                             log(f'Error while prettyTable: {e}')
                             print(data)
                 except Exception as e:
-                    print(f"Error while running command: {e}")
+                    colorify(f"Error while running command: {e}", 'error')
                     log(f"Error while running command: {e}")
                 else:
-                    print('No error in running command.')
+                    colorify('No error in running command.', 'error')
                 '''        elif index == 10:
                 #Edit data
                 table_name = input("Enter table name to access: ")
@@ -1046,8 +1059,8 @@ while True:
                 #Log in
                 start_program()
             elif index == 12:
-                print("Thank you for using this program.")
+                colorify("Thank you for using this program.", 'success')
                 exit()
             else:
-                print("Something went wrong.")
+                colorify("Something went wrong.",'fatalerror')
                 log(f"Unforeseen error when index was {index}.")
