@@ -1,7 +1,7 @@
 import mysql.connector #sql
 from datetime import datetime, date #utilities
 import zampy
-from prettytable import PrettyTable, from_db_cursor #utilities
+from prettytable import PrettyTable, from_db_cursor, FRAME, ALL #utilities
 import pickle #utilities
 import bcrypt #password
 import os #login_file destination
@@ -11,6 +11,12 @@ import getpass #password
 from termcolor import colored #text 
 from colorama import init #text
 import pyfiglet #text
+import time
+import itertools, sys
+from tqdm import tqdm #progress bar
+import threading
+
+
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
 #c = database.cursor(buffered=True)
@@ -23,7 +29,7 @@ request_promotion = 'Request to Promote'
 # Define the path to the local directory
 directory = Path.home() / "HospitalManagement-PythonSQL"  # This creates a folder in the user's home directory
 
-debug = True
+debug = False
 # Create the directory if it doesn't exist
 os.makedirs(directory, exist_ok=True)
 
@@ -36,6 +42,13 @@ message_types = ['success', 'error', 'ask', 'fatalerror',
 
 init(autoreset=True)
 
+def slow_print(message, delay=0.01):
+    for char in message:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    print()
+
 MESSAGE_STYLES = {
     'success': {'symbol': '✅', 'color': 'light_green'},
     'error': {'symbol': '❌', 'color': 'light_red'},
@@ -45,6 +58,9 @@ MESSAGE_STYLES = {
     'info': {'symbol': 'ℹ️', 'color': 'light_blue'},
     'debug': {'symbol': '🐞', 'color': 'magenta'}
 }
+
+def print_header(header_text):
+    print(colored(f"{'*'*10} {header_text} {'*'*10}", 'yellow'))
 
 def convertTime(rawTime):
     #"""Converts 24-hour formatted time (HH:MM:SS) to 12-hour AM/PM format."""
@@ -66,14 +82,23 @@ def convertTime(rawTime):
     # Return formatted time
     return f"{hour}:{minutes} {period}"
 
+def loading(stop_event):
+    spinner = itertools.cycle(['|', '\\', '-', '/'])
+    while not stop_event.is_set():
+        sys.stdout.write(next(spinner))   # write the next character
+        sys.stdout.flush()                # flush stdout buffer
+        time.sleep(.1)                    # wait a bit
+        sys.stdout.write('\b')            # erase the last character
+
 def colorify(message, type, end=False):
     style = MESSAGE_STYLES.get(type, {'symbol': '❔', 'color': 'white'})
     symbol = style['symbol']
     color = style['color']
     if end == False:
-        print(colored(f"[{symbol}]\t{message}", color))
+        print(colored(f"[{symbol}]\t{message}", color) + '\n')
     else:
         print(colored(f"[{symbol}]\t{message}", color), end="")
+
 def checkIfNonNull(variable):
     '''If null, returns False.'''
     if variable in [None, 'None', 'NULL', 'Null', (None,), ('NULL',), (), '', [], {}]:
@@ -94,16 +119,18 @@ def makePrettyTable(tableName, data):
     #create PrettyTable with the column names
     if data and checkIfNonNull(data) == True:
         table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
-        
+        #table.border = True
+        #table.hrules = FRAME  # Add horizontal rules
+        #table.vrules = ALL    # Add vertical rules
         #print data for debugging purposes
         if debug:
             colorify(f'data in makePrettyTable: {data}', 'debug')
         
         #check if data is a single row (tuple or list) or multiple rows (list of tuples/lists)
-            if isinstance(data[0], (tuple, list)):  # Multiple rows case (list of lists/tuples)
-                table.add_rows([x for x in data])
-            else:  #single row case (tuple or list)
-                table.add_row([x for x in data])
+        if isinstance(data[0], (tuple, list)):  # Multiple rows case (list of lists/tuples)
+            table.add_rows([x for x in data])
+        else:  #single row case (tuple or list)
+            table.add_row([x for x in data])
 
         # raw display the table
         print(table)
@@ -183,7 +210,7 @@ def checkPasswords(correct_password: str, name: str = "current user", usebcrypt 
 
 def incorrectPassword():
     colorify("Incorrect password!", 'fatalerror')
-    #do something more here!
+
 def incrementNumericPart(text):
     number = (text[1:])
     x = 0
@@ -802,6 +829,9 @@ def add_value_to_table(tableName, columnNames: list, values: list):
 def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = None, conditionNames: list = None, conditionValues: list = None, returnAllData:bool = True):
     '''Assumes all conditions to be seperated by AND for now.'''
     command = "select"
+    #stop_event = threading.Event()
+    #spinner_thread = threading.Thread(target=loading, args=(stop_event,))
+    #spinner_thread.start()
     if columnNames == None:
         allColumns = True
     if tableName:
@@ -828,10 +858,15 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
         #return None
     if debug:
         colorify(f"Final commmand: {command}", 'debug')
-        log(f"Final commmand: {command}")
+    log(f"Final commmand: {command}")
 
     try:
         c.execute(command)
+        '''        no_of_rows = len(c.fetchall())
+        progress_bar = tqdm(total=no_of_rows, desc="Fetching data", ncols=100)
+        for index in range(no_of_rows):
+            time.sleep(.25)
+            progress_bar.update(100/no_of_rows)'''
     except Exception as e:
         colorify(f"Error while trying to retrieve data: {e}",'debug')
         log(f"Error while trying to retrieve data: {e}")
@@ -842,6 +877,10 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
         else:
             data = c.fetchone()
         return data
+    #finally:
+        #stop_event.set()
+        #spinner_thread.join()  # Wait for the spinner to stop
+        #sys.stdout.write('\b')            # erase the last character
 
 def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appointmentReason):
     if patientID and doctorID and appointmentDate and appointmentReason and appointmentTime:
@@ -957,7 +996,7 @@ while True:
         start_program()
     #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
-    print('\n\n\n')
+    print('\n\n')
     updateAppointments(current_user_type)
     colorify(f'Account: {current_user_data}', 'info')
     log(f"Account used: {current_user_type}")
@@ -980,6 +1019,7 @@ while True:
                 patientID = (input("Enter patient ID: "))
                 data = viewPatientDetails(patientID)
                 #print("Requested data:", data)
+                print_header('Patient Details')
                 makePrettyTable('patients', [data])
             elif index == 1:
                 doctorID = (input("Enter doctor ID: "))

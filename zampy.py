@@ -256,6 +256,7 @@ from tkcalendar import Calendar
 
 def choose_date():
     """Open a graphical popup to select a date. Returns date in 'YYYY-MM-DD' format."""
+    print('Choose date: ')
     root = tk.Tk()
     
     root.withdraw()  # Hide the main window
@@ -280,6 +281,7 @@ def choose_date():
 
 def choose_time():
     """Open a graphical popup to input time. Returns time in 'HOURS:MINUTES:SECONDS' format."""
+    print('Choose time: ')
     root = tk.Tk()
     root.withdraw()  # Hide the main window
     root.focus_force()
