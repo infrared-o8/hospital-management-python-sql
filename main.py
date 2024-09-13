@@ -8,7 +8,7 @@ import os #login_file destination
 from pathlib import Path #login_file destination
 import getpass #password
 
-from termcolor import colored #text 
+from termcolor import colored, cprint #text 
 from colorama import init #text
 import pyfiglet #text
 import time
@@ -42,12 +42,14 @@ message_types = ['success', 'error', 'ask', 'fatalerror',
 
 init(autoreset=True)
 
-def slow_print(message, delay=0.01):
+def slow_print(message, color, delay=0.02, end=False):
     for char in message:
-        sys.stdout.write(char)
-        sys.stdout.flush()
+        #sys.stdout.write(char)
+        #sys.stdout.flush()
+        cprint(char, color=color, end='')
         time.sleep(delay)
-    print()
+    if not end:
+        print()
 
 MESSAGE_STYLES = {
     'success': {'symbol': '✅', 'color': 'light_green'},
@@ -95,9 +97,9 @@ def colorify(message, type, end=False):
     symbol = style['symbol']
     color = style['color']
     if end == False:
-        print(colored(f"[{symbol}]\t{message}", color) + '\n')
+        slow_print(f"[{symbol}]\t{message}", color, end=False)
     else:
-        print(colored(f"[{symbol}]\t{message}", color), end="")
+        slow_print(f"[{symbol}]\t{message}", color, end=True)
 
 def checkIfNonNull(variable):
     '''If null, returns False.'''
@@ -322,8 +324,8 @@ def updateAppointments(current_user_type):
                             else:
                                 add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointment[0], patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
                                 if debug:
-                                    colorify("Succeeded in making appointment!", 'success')
                                     log("Succeeded in making appointment!")
+                                colorify("Succeeded in making appointment!", 'success')
                     else:
                         colorify("Time cannot be chosen in the past.", 'error')
         else:
