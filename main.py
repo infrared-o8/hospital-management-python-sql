@@ -31,6 +31,21 @@ os.makedirs(directory, exist_ok=True)
 login_file = directory / "creds.dat"
 log_file = directory / 'log.txt'
 
+message_types = ['success', 'error', 'ask', 'fatalerror', 
+                 'preheader', 'info', 'debug']
+
+init(autoreset=True)
+
+MESSAGE_STYLES = {
+    'success': {'symbol': '✅', 'color': 'light_green'},
+    'error': {'symbol': '❌', 'color': 'light_red'},
+    'ask': {'symbol': '🔴', 'color': 'yellow'},
+    'fatalerror': {'symbol': '💀', 'color': 'red'},
+    'preheader': {'symbol': '🟡', 'color': 'white'},
+    'info': {'symbol': 'ℹ️', 'color': 'light_blue'},
+    'debug': {'symbol': '🐞', 'color': 'magenta'}
+}
+
 def convertTime(rawTime):
     #"""Converts 24-hour formatted time (HH:MM:SS) to 12-hour AM/PM format."""
     # Split the rawTime into components
@@ -50,22 +65,6 @@ def convertTime(rawTime):
     
     # Return formatted time
     return f"{hour}:{minutes} {period}"
-
-message_types = ['success', 'error', 'ask', 'fatalerror', 
-                 'preheader', 'info', 'debug']
-
-init(autoreset=True)  # Initializes colorama for cross-platform compatibility
-
-# Mapping message types to colors
-MESSAGE_STYLES = {
-    'success': {'symbol': '✅', 'color': 'light_green'},
-    'error': {'symbol': '❌', 'color': 'light_red'},
-    'ask': {'symbol': '🔴', 'color': 'light_cyan'},
-    'fatalerror': {'symbol': '💀', 'color': 'red'},
-    'preheader': {'symbol': '🟡', 'color': 'yellow'},
-    'info': {'symbol': 'ℹ️', 'color': 'blue'},
-    'debug': {'symbol': '🐞', 'color': 'magenta'}
-}
 
 def colorify(message, type, end=False):
     style = MESSAGE_STYLES.get(type, {'symbol': '❔', 'color': 'white'})
@@ -93,21 +92,21 @@ def makePrettyTable(tableName, data):
     columnNames = c.fetchall()
     
     #create PrettyTable with the column names
-    table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
-    
-    #print data for debugging purposes
-    if debug:
-        colorify(f'data in makePrettyTable: {data}', 'debug')
-    
-    #check if data is a single row (tuple or list) or multiple rows (list of tuples/lists)
     if data and checkIfNonNull(data) == True:
-        if isinstance(data[0], (tuple, list)):  # Multiple rows case (list of lists/tuples)
-            table.add_rows([x for x in data])
-        else:  #single row case (tuple or list)
-            table.add_row([x for x in data])
+        table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
+        
+        #print data for debugging purposes
+        if debug:
+            colorify(f'data in makePrettyTable: {data}', 'debug')
+        
+        #check if data is a single row (tuple or list) or multiple rows (list of tuples/lists)
+            if isinstance(data[0], (tuple, list)):  # Multiple rows case (list of lists/tuples)
+                table.add_rows([x for x in data])
+            else:  #single row case (tuple or list)
+                table.add_row([x for x in data])
 
-    # raw display the table
-    print(table)
+        # raw display the table
+        print(table)
     
 
 def viewPendingRequests():
@@ -559,6 +558,7 @@ def signup(user_type):
                 password = password[0]
                 if checkPasswords(password, patient_record[1]):
                     current_user_data = patient_record
+                    colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                 else:
                     incorrectPassword()
             else:
@@ -584,6 +584,7 @@ def signup(user_type):
                 password = password[0]
                 if checkPasswords(password, doctor_record[1]):
                     current_user_data = doctor_record
+                    colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                 else:
                     incorrectPassword()
             else:
@@ -611,6 +612,7 @@ def signup(user_type):
                     password = password[0]
                     if checkPasswords(password, admin_record[1]):
                         current_user_data = admin_record
+                        colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                     else:
                         incorrectPassword()
                 else:
@@ -663,7 +665,7 @@ def login(user_type):
             #print("cpassword:", cpassword)
             if checkPasswords(cpassword, record[1]):
                 current_user_data = record
-
+                colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                 bfile = open(login_file, "wb")
                 pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
             else:
@@ -687,7 +689,7 @@ def login(user_type):
             cpasswordbytes = cpassword.encode('utf-8')
             if checkPasswords(cpassword, record[1]):
                 current_user_data = record
-
+                colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                 bfile = open(login_file, "wb")
                 pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
             else:
@@ -707,6 +709,7 @@ def login(user_type):
                 cpassword = cpassword[0]
                 if checkPasswords(cpassword, record[1]):
                     current_user_data = record
+                    colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                 else:
                     incorrectPassword()
             else:
@@ -954,6 +957,7 @@ while True:
         start_program()
     #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
+    print('\n\n\n')
     updateAppointments(current_user_type)
     colorify(f'Account: {current_user_data}', 'info')
     log(f"Account used: {current_user_type}")
@@ -963,6 +967,8 @@ while True:
         action = options_dict[tempIndex]
     except ValueError:
         colorify("Enter data of correct datatype.", 'error')
+    except KeyError:
+        colorify('The index entered was out of range. Try again.', 'error')
     else:
         try:
             index = all_options.index(action)
@@ -993,6 +999,9 @@ while True:
                         doctorID = possibleDoctorIDs[choice-1][0]
                     else:
                         doctorID = possibleDoctorIDs[0][0]
+                else:
+                    colorify(f'No doctor with name {doctorName} was found.', 'error')
+                    continue
                 #appointmentDate = input("Enter date of appointment (Format: YYYY-MM-DD): ")
                 appointmentDate = zampy.choose_date()
                 appointmentTime = zampy.choose_time()
