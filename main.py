@@ -17,6 +17,7 @@ from tqdm import tqdm #progress bar
 import threading
 
 
+#database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 c = database.cursor()
 #c = database.cursor(buffered=True)
@@ -61,8 +62,8 @@ MESSAGE_STYLES = {
     'debug': {'symbol': '🐞', 'color': 'magenta'}
 }
 
-def print_header(header_text):
-    print(colored(f"{'*'*10} {header_text} {'*'*10}", 'yellow'))
+def print_header(header_text: str = "Table"):
+    print(colored(f"{'*'*10} {header_text.upper()} {'*'*10}", 'yellow', attrs=['bold', 'reverse']))
 
 def convertTime(rawTime):
     #"""Converts 24-hour formatted time (HH:MM:SS) to 12-hour AM/PM format."""
@@ -120,6 +121,10 @@ def makePrettyTable(tableName, data):
     
     #create PrettyTable with the column names
     if data and checkIfNonNull(data) == True:
+        if table_name.endswith(';'):
+            print_header(tableName)
+        else:
+            print_header(tableName[:-2])
         table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
         #table.border = True
         #table.hrules = FRAME  # Add horizontal rules
@@ -1021,7 +1026,7 @@ while True:
                 patientID = (input("Enter patient ID: "))
                 data = viewPatientDetails(patientID)
                 #print("Requested data:", data)
-                print_header('Patient Details')
+                #print_header('Patient Details')
                 makePrettyTable('patients', [data])
             elif index == 1:
                 doctorID = (input("Enter doctor ID: "))
@@ -1130,7 +1135,8 @@ while True:
                     colorify(f"Error while running command: {e}", 'error')
                     log(f"Error while running command: {e}")
                 else:
-                    colorify('No error in running command.', 'error')
+                    if debug:
+                        colorify('No error in running command.', 'debug')
                 '''        elif index == 10:
                 #Edit data
                 table_name = input("Enter table name to access: ")
