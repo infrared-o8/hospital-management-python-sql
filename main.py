@@ -1,7 +1,8 @@
 import mysql.connector #sql
 from datetime import datetime, date #utilities
 import zampy
-from prettytable import PrettyTable, from_db_cursor, FRAME, ALL #utilities
+from prettytable import PrettyTable, from_db_cursor, FRAME, ALL,colortable #utilities
+from prettytable.colortable import ColorTable, Themes
 import pickle #utilities
 import bcrypt #password
 import os #login_file destination
@@ -42,6 +43,16 @@ message_types = ['success', 'error', 'ask', 'fatalerror',
                  'preheader', 'info', 'debug']
 
 init(autoreset=True)
+
+months = {1: 'Jan', 2: 'Feb', 3:'Mar', 4:'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10:'Oct', 11:'Nov', 12:'Dec'}
+
+
+def friendlyYear(yeariso: str, convertMD: bool = False) -> str:
+    split = str(yeariso).split('-')
+    year, month, day = split[0], split[1], split[2]
+    if convertMD:
+        return f"{day} {months[int(month)]} {year}"
+    return f"{day}/{month}/{year}"
 
 def slow_print(message, color, delay=0.02, end=False):
     for char in message:
@@ -116,16 +127,23 @@ def returnNewID(tableName):
 
 def makePrettyTable(tableName, data):
     # fetch column names for the table
-    c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'{tableName}'")
-    columnNames = c.fetchall()
-    
+    #c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'{tableName}'")
+    c.execute(f'select * from {tableName}')
+    #columnNames = c.fetchall()
+    sampleData = c.fetchall()
+    del sampleData
+    columnNames = [desc[0] for desc in c.description]
+
     #create PrettyTable with the column names
     if data and checkIfNonNull(data) == True:
         if tableName.endswith(';'):
             print_header(tableName[:-1])
         else:
             print_header(tableName)
-        table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
+        if debug:
+            colorify(f'{[columnNames[x] for x in range(len(columnNames))]}', 'debug')
+        table = ColorTable([columnNames[x] for x in range(len(columnNames))], theme=Themes.FOREST)
+        #table.sortby = None
         #table.border = True
         #table.hrules = FRAME  # Add horizontal rules
         #table.vrules = ALL    # Add vertical rules
@@ -285,10 +303,10 @@ def updateAppointments(current_user_type):
 
         if len(appointmentsPendingLater) > 0:
             for appointment in appointmentsPendingLater:
-                colorify(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {appointment[3]} at {convertTime(appointment[-1])}", 'info')
+                colorify(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {friendlyYear(appointment[3], convertMD=True)} at {convertTime(appointment[-1])}", 'info')
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
-                if appointment[6] not in [None, 'None', 'NULL']:
+                if checkIfNonNull(appointment[6]) == True:
                     appointment_time = datetime.strptime(appointment[6], '%H:%M').time()  # Convert to time object
                     
                     # Get the current time
@@ -738,12 +756,15 @@ def login(user_type):
                 signup(user_type)
         else:
             cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
+            #cpasswordbytes = cpassword.encode('utf-8')
             #print(cpassword)
             if checkIfNonNull(cpassword) == True:
                 cpassword = cpassword[0]
                 if checkPasswords(cpassword, record[1]):
                     current_user_data = record
                     colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
+                    #bfile = open(login_file, "wb")
+                    #pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
                 else:
                     incorrectPassword()
             else:
@@ -999,7 +1020,7 @@ start_program()
 
 
 while True:
-    if checkIfNonNull(current_user_data) == False or checkIfNonNull(current_user_type) == False:
+    while checkIfNonNull(current_user_data) == False or checkIfNonNull(current_user_type) == False:
         start_program()
     #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
