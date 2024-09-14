@@ -434,7 +434,7 @@ def start_program():
         found_user_data = bfilecontents[1]
         found_user_password = bfilecontents[2]
     except Exception as e:
-        colorify(f"Some error occured while trying to access existing login-file: {e}", 'error')
+        colorify(f"Some error occured while trying to access login file.", 'error')
         if debug:
             log(f"Some error occured while trying to access existing login-file: {e}.\nProceeding to normal login.")
         colorify("Proceeding to normal login...", 'error')
@@ -466,7 +466,7 @@ def start_program():
             if checkPasswords(found_user_password, name, usebcrypt=True):
                 current_user_type = bfilecontents[0]
                 current_user_data = bfilecontents[1]
-                colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
+                colorify(f"Succesfully logged in as {current_user_data[1]}.", 'success')
                 
             else:
                 incorrectPassword()
@@ -488,8 +488,8 @@ def start_program():
             except ValueError:
                 colorify("Input was of incorrect datatype. Try again...\n", 'error')
                 start_program()
-            else:
-                attain_creds(current_user_type)
+            #else:
+            #    attain_creds(current_user_type)
 
 
 
