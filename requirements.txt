@@ -6,3 +6,4 @@ pyfiglet
 tqdm
 getpass
 datetime
+halo

@@ -17,10 +17,12 @@ import itertools, sys
 from tqdm import tqdm #progress bar
 import threading
 
-
+from halo import Halo
+spinnerType = 'dots'
 #database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
-database = mysql.connector.connect(host="192.168.100.48", user = "remote_user", password="remote", database="hospital_main")
-c = database.cursor()
+with Halo(text='Connecting to mysql', spinner=spinnerType):
+    database = mysql.connector.connect(host="192.168.100.48", user = "remote_user", password="remote", database="hospital_main")
+    c = database.cursor()
 #c = database.cursor(buffered=True)
 
 current_user_type = None
@@ -128,9 +130,10 @@ def returnNewID(tableName):
 def makePrettyTable(tableName, data):
     # fetch column names for the table
     #c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'{tableName}'")
-    c.execute(f'select * from {tableName}')
-    #columnNames = c.fetchall()
-    sampleData = c.fetchall()
+    with Halo(text='Retrieving data...', spinner=spinnerType):
+        c.execute(f'select * from {tableName}')
+        #columnNames = c.fetchall()
+        sampleData = c.fetchall()
     del sampleData
     columnNames = [desc[0] for desc in c.description]
 
@@ -165,8 +168,9 @@ def viewPendingRequests():
     global current_user_data, current_user_type
     if current_user_type == 'A': #confirm its an admin
         #all signup requests.
-        c.execute(f'select * from admin_requests where requestReason = \'{request_sign_up}\'')
-        signUpRequests = c.fetchall()
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute(f'select * from admin_requests where requestReason = \'{request_sign_up}\'')
+            signUpRequests = c.fetchall()
         if len(signUpRequests) > 0:
             colorify('Pending signup requests:\n', 'preheader')
             makePrettyTable('admin_requests', signUpRequests)
@@ -191,6 +195,8 @@ def dealWithPendingRequests():
             add_value_to_table('admins', ['adminID', 'adminName'], [id, name])
             add_value_to_table('credentials', ['userID'], [id])
         else:
+            c.execute(f'delete from admin_requests where requestID = "{req[0]}";')
+            database.commit()
             continue
     #deal with promotionReq
         '''    for req in promotionReq:
@@ -263,8 +269,9 @@ def makeNewPrescription(returnPCID = True):
     prescription = input("Enter prescription name: ")
     prescriptionID = None
     #check if it already exists
-    c.execute(f"select * from prescriptions where medication_name = '{prescription}'")
-    existingPrescriptions = c.fetchall()
+    with Halo(text='Retrieving data...', spinner=spinnerType):
+        c.execute(f"select * from prescriptions where medication_name = '{prescription}'")
+        existingPrescriptions = c.fetchall()
     if len(existingPrescriptions) > 0:
         #exists already!
         colorify(f"A prescription already recorded with the same name was found.\n", 'info')
@@ -283,23 +290,25 @@ def makeNewPrescription(returnPCID = True):
 
 def requestExistingAdminToSignUp(adminName):
     #c.execute(f"insert into admin_requests values('{}', 'Request to Sign Up', ')")
-    c.execute('select * from admin_requests')
-    ordered_table = c.fetchall()
+    with Halo(text='Retrieving data...', spinner=spinnerType):
+        c.execute('select * from admin_requests')
+        ordered_table = c.fetchall()
     new_request_id = ''
     if len(ordered_table) > 0:
         new_request_id = f"{returnNewID('admin_requests')}" 
     else:
         new_request_id = 'REQ1'
     add_value_to_table('admin_requests', ['requestID', 'requestReason', 'signUpRequestName'], [new_request_id, request_sign_up, adminName])
-    colorify(f'Successfully requested for the sign-up of {adminName}', 'Success')
+    colorify(f'Successfully requested for the sign-up of {adminName}', 'success')
 def updateAppointments(current_user_type):
     global current_user_data
     if current_user_type == "P":
         #appointmentsPending = retreiveData('appointments', conditionNames=['patientID'], conditionValues=[current_user_data[0]])
-        c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate")
-        appointmentsPendingToday = c.fetchall()
-        c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' < appointmentDate")
-        appointmentsPendingLater = c.fetchall()
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate")
+            appointmentsPendingToday = c.fetchall()
+            c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' < appointmentDate")
+            appointmentsPendingLater = c.fetchall()
 
         if len(appointmentsPendingLater) > 0:
             for appointment in appointmentsPendingLater:
@@ -325,7 +334,7 @@ def updateAppointments(current_user_type):
                                 colorify(f"You missed an appointment that was scheduled for {convertTime(appointment_time)}", 'error')
                                 log(f'{current_user_data[1]} missed an appointment: {missedRecordConfirm}')
                 else:
-                    colorify(f"Your appointment scheduled for {date.today()} was found to have no time assigned.\nChoose a time: ", 'ask')
+                    colorify(f"Your appointment scheduled for {date.today()} with {viewDoctorDetails(appointment[2])[1]} was found to have no time assigned.\nChoose a time: ", 'ask')
                     timeInput = zampy.choose_time()
                     timeDateTime = datetime.strptime(timeInput, "%H:%M").time()
                     #check if the patient has another appointment at chosen time
@@ -334,6 +343,7 @@ def updateAppointments(current_user_type):
                     #todayStr = str(datetime.today().date())
                     #ensure time doesnt overlap.
                     if timeDateTime > datetime.now().time(): #check if its not in the past
+                        #with Halo(text='Retrieving data...', spinner=spinnerType):
                         c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate and appointmentTime = '{appointmentTime}'")
                         potentialPatientAlreadyHasAppointment = c.fetchall()
                         if len(potentialPatientAlreadyHasAppointment) > 0:
@@ -356,13 +366,11 @@ def updateAppointments(current_user_type):
     elif current_user_type == "D":
         if current_user_data:
             doctorID = current_user_data[0]
-        c.execute(f"select * from appointments where LOWER(doctorID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate")
-        appointmentsPendingToday = c.fetchall()
-        c.execute(f"select * from appointments where LOWER(doctorID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' < appointmentDate")
-        appointmentsPendingLater = c.fetchall()
-
-        
-
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute(f"select * from appointments where LOWER(doctorID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' = appointmentDate")
+            appointmentsPendingToday = c.fetchall()
+            c.execute(f"select * from appointments where LOWER(doctorID) = '{current_user_data[0].lower()}' and '{date.today().isoformat()}' < appointmentDate")
+            appointmentsPendingLater = c.fetchall()
         #appointmentsPendingToday = c.fetchall()
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
@@ -378,8 +386,9 @@ def updateAppointments(current_user_type):
         else:
             colorify("No upcoming appointments today.", 'info')
         #print(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and {date.today().isoformat()} >= appointmentDate")
-        c.execute(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and '{date.today().isoformat()}' >= appointmentDate")
-        assumedDoneAppointments = c.fetchall()
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute(f"select * from appointments where LOWER(doctorID) = '{doctorID.lower()}' and '{date.today().isoformat()}' >= appointmentDate")
+            assumedDoneAppointments = c.fetchall()
         doneAppointments = []
         for assumedAppointment in assumedDoneAppointments:
             if checkIfNonNull(assumedAppointment[6]) == True:
@@ -596,8 +605,9 @@ def signup(user_type):
     if user_type == "P":
         patient_name = input("Enter patient name: ")
         #check if it already exists in patients table.
-        c.execute('select * FROM patients ORDER BY PatientID') ##orderby functionality here!
-        ordered_patient_table = c.fetchall()
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute('select * FROM patients ORDER BY PatientID') ##orderby functionality here!
+            ordered_patient_table = c.fetchall()
 
         #ordered_patient_table = retreiveData("patients", )
 
@@ -625,8 +635,9 @@ def signup(user_type):
     elif user_type == "D":
         doctor_name = input("Enter doctor name: ")
         #check if it already exists in doctors table.
-        c.execute('select * FROM doctors ORDER BY DoctorID') ##orderby functionality here!
-        ordered_doctor_table = c.fetchall()
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute('select * FROM doctors ORDER BY DoctorID') ##orderby functionality here!
+            ordered_doctor_table = c.fetchall()
         (dExists, doctor_record) = zampy.check_record_exists(doctor_name, 1, ordered_doctor_table)
         if dExists:
             colorify(f"Username already exists with doctor data: {doctor_record}!", 'error') #add column names - !!
@@ -651,8 +662,9 @@ def signup(user_type):
     elif user_type == 'A':
         admin_name = input("Enter admin name: ")
         #check if it already exists in doctors table.
-        c.execute('select * FROM admins ORDER BY adminID') ##orderby functionality here!
-        ordered_admin_table = c.fetchall()
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute('select * FROM admins ORDER BY adminID') ##orderby functionality here!
+            ordered_admin_table = c.fetchall()
         (aExists, admin_record) = zampy.check_record_exists(admin_name, 1, ordered_admin_table)
         if aExists:
             colorify(f"Username already exists with admin data: {admin_record}!", 'error') #add column names - !!
@@ -889,7 +901,8 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
     log(f"Final commmand: {command}")
 
     try:
-        c.execute(command)
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute(command)
         '''        no_of_rows = len(c.fetchall())
         progress_bar = tqdm(total=no_of_rows, desc="Fetching data", ncols=100)
         for index in range(no_of_rows):
@@ -1058,8 +1071,9 @@ while True:
                 #Make an appointment
                 doctorName = input("Enter doctor name to make appointment to: ")
                 doctorID = None
-                c.execute(f'select * from doctors where LOWER(name) = "{doctorName.lower()}"')
-                possibleDoctorIDs = c.fetchall()
+                with Halo(text='Retrieving data...', spinner=spinnerType):
+                    c.execute(f'select * from doctors where LOWER(name) = "{doctorName.lower()}"')
+                    possibleDoctorIDs = c.fetchall()
                 if possibleDoctorIDs and checkIfNonNull(possibleDoctorIDs) == True:
                     if len(possibleDoctorIDs) > 1:
                         colorify('Choose doctor:', 'ask')
@@ -1118,14 +1132,16 @@ while True:
                 options = ['Upcoming appointments', 'Completed appointments']
                 index = int(input(zampy.make_menu_from_options(options)))
                 if index == 1:
-                    c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s AND appointmentDate <= %s", (current_user_data[0], 'Scheduled', str(date.today().isoformat())))
-                    data = c.fetchall()
+                    with Halo(text='Retrieving data...', spinner=spinnerType):
+                        c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s AND appointmentDate <= %s", (current_user_data[0], 'Scheduled', str(date.today().isoformat())))
+                        data = c.fetchall()
                     #print(data) 
                     makePrettyTable('appointments', data)
                     # print(from_db_cursor(c))
                 elif index == 2:
-                    c.execute("SELECT * FROM medicalhistory WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Completed'))
-                    data = c.fetchall()
+                    with Halo(text='Retrieving data...', spinner=spinnerType):
+                        c.execute("SELECT * FROM medicalhistory WHERE doctorID = %s AND status = %s", (current_user_data[0], 'Completed'))
+                        data = c.fetchall()
                     #print(data)
                     makePrettyTable('medicalhistory', data)
                     # print(from_db_cursor(c))
@@ -1134,24 +1150,26 @@ while True:
             elif index == 8:
                 #View table
                 table_name = input("Enter table name to access: ")
-                c.execute(f'select * from {table_name}')
-                data = c.fetchall()
+                with Halo(text='Retrieving data...', spinner=spinnerType):
+                    c.execute(f'select * from {table_name}')
+                    data = c.fetchall()
                 #print(data)
                 makePrettyTable(f'{table_name}', data)
             elif index == 9:
                 #Execute custom SQL command
                 sql_command = input("Enter sql command:\n")
                 try:
-                    c.execute(sql_command)
-                    if 'select' in sql_command:
-                        data = c.fetchall()
-                        try:
-                            tablename = sql_command.split(' ')[3]
-                            makePrettyTable(tablename, data)
-                        except Exception as e:
-                            colorify("Couldn't make table from given data.", 'error')
-                            log(f'Error while prettyTable: {e}')
-                            print(data)
+                    with Halo(text='Retrieving data...', spinner=spinnerType):
+                        c.execute(sql_command)
+                        if 'select' in sql_command:
+                            data = c.fetchall()
+                    try:
+                        tablename = sql_command.split(' ')[3]
+                        makePrettyTable(tablename, data)
+                    except Exception as e:
+                        colorify("Couldn't make table from given data.", 'error')
+                        log(f'Error while prettyTable: {e}')
+                        print(data)
                 except Exception as e:
                     colorify(f"Error while running command: {e}", 'error')
                     log(f"Error while running command: {e}")
