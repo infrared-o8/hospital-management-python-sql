@@ -76,3 +76,48 @@ https://stackoverflow.com/questions/1054984/how-can-i-get-column-names-from-a-ta
 https://www.geeksforgeeks.org/creating-tables-with-prettytable-library-python/
 https://stackoverflow.com/questions/4995733/how-to-create-a-spinning-command-line-cursor
 https://stackoverflow.com/questions/59770278/how-to-query-for-column-datatypes-of-mssql-table-from-python
+
+'''
+class Themes:
+    DEFAULT = Theme()
+    OCEAN = Theme(
+        default_color="36",
+        vertical_color="34",
+        horizontal_color="34",
+        junction_color="36",
+    )
+    SUNSET = Theme(
+        default_color="33",  # Orange text
+        vertical_color="31",  # Dark orange borders
+        horizontal_color="31",  # Dark orange lines
+        junction_color="33",  # Red junctions
+    )
+    
+    FOREST = Theme(
+        default_color="92",  # Green text
+        vertical_color="32",  # Dark green borders
+        horizontal_color="32",  # Dark green lines
+        junction_color="97",  # Light green junctions
+    )
+    
+    LAVENDER = Theme(
+        default_color="105",  # Purple text
+        vertical_color="135",  # Light purple borders
+        horizontal_color="135",  # Light purple lines
+        junction_color="141",  # Lavender junctions
+    )
+    
+    MIDNIGHT = Theme(
+        default_color="240",  # Dark grey text
+        vertical_color="234",  # Almost black borders
+        horizontal_color="234",  # Almost black lines
+        junction_color="255",  # White junctions
+    )
+    
+    SOLARIZED = Theme(
+        default_color="136",  # Yellowish text
+        vertical_color="244",  # Light grey borders
+        horizontal_color="244",  # Light grey lines
+        junction_color="136",  # Yellowish junctions
+    )
+'''
