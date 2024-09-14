@@ -100,14 +100,6 @@ def convertTime(rawTime):
     # Return formatted time
     return f"{hour}:{minutes} {period}"
 
-def loading(stop_event):
-    spinner = itertools.cycle(['|', '\\', '-', '/'])
-    while not stop_event.is_set():
-        sys.stdout.write(next(spinner))   # write the next character
-        sys.stdout.flush()                # flush stdout buffer
-        time.sleep(.1)                    # wait a bit
-        sys.stdout.write('\b')            # erase the last character
-
 def colorify(message, type, end=False):
     style = MESSAGE_STYLES.get(type, {'symbol': '❔', 'color': 'white'})
     symbol = style['symbol']
@@ -148,6 +140,7 @@ def fetchAccountInfo(requiredID, current_user_type):
         return c.fetchone()
 
 def fetchColumns(tableName):
+    '''Returns column names from the given tableName.'''
     if checkIfNonNull(tableName) == True:
         with Halo(text='Retrieving data...', spinner=spinnerType):
             c.execute(f'select * from {tableName}')
@@ -1056,9 +1049,15 @@ while True:
                 historyOptions = ['Access using a recordID', 'Access your records by specific doctor (doctorID)', 'Access your history'] #add more options here
                 historyIndex = int(input(zampy.make_menu_from_options(historyOptions)))
                 current_patient_id = current_user_data[0]
+                data = None
                 if historyIndex == 1:
                     recordID = (input("Enter recordID: "))
-                    data = viewRecordDetails(current_patient_id, recordID=recordID)
+                    c.execute(f'select * from medicalhistory where recordID = "{recordID}"')
+                    assumedRecord = c.fetchone()
+                    if assumedRecord[1] == current_user_data[0]:
+                        data = viewRecordDetails(current_patient_id, recordID=recordID)
+                    else:
+                        colorify('You can\'t access another patient\'s medical history!', 'error')
                     #print(data)
                 elif historyIndex == 2:
                     doctorID = (input("Enter doctor ID: "))
@@ -1066,7 +1065,8 @@ while True:
                     #print(data)
                 elif historyIndex == 3:
                     data = viewRecordDetails(current_patient_id, all=True)
-                makePrettyTable('medicalhistory', data)
+                if data:
+                    makePrettyTable('medicalhistory', data)
             elif index == 4:
                 idOrAll = int(input(zampy.make_menu_from_options(['View all prescriptions', 'View by ID'])))
                 if idOrAll == 1:
