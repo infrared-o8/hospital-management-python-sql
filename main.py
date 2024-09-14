@@ -140,7 +140,7 @@ def checkIfNonNull(variable):
 def returnNewID(tableName):
     return incrementNumericPart(getHighestID(retreiveData(tableName)))
 
-def fetchAccountInfo(requiredID):
+def fetchAccountInfo(requiredID, current_user_type):
     with Halo(text='Retrieving data...', spinner=spinnerType):
         tablename, id = fetchTableNameFromUserType(current_user_type)
 
@@ -468,7 +468,8 @@ def start_program():
     except Exception as e:
         colorify(f"Some error occured while trying to access login file.", 'error')
         if debug:
-            log(f"Some error occured while trying to access existing login-file: {e}.\nProceeding to normal login.")
+            colorify(f"Some error occured while trying to access login file. {e}", 'error')
+        log(f"Some error occured while trying to access existing login-file: {e}.\nProceeding to normal login.")
         colorify("Proceeding to normal login...", 'error')
         try:
             colorify("Using as:\n", 'ask')
@@ -491,7 +492,8 @@ def start_program():
             if checkIfNonNull(current_user_data) == False:
                 attain_creds(current_user_type)
     else:
-        name = bfilecontents[1][1]
+        id = bfilecontents[1][0]
+        name = fetchAccountInfo(id, str(found_user_type))[1]
         colorify(f"Found an existing login file for {name}. Confirm login with these credentials?", 'ask')
         confirmLogin = int(input(zampy.make_menu_from_options()))
         if confirmLogin == 1:
@@ -500,7 +502,7 @@ def start_program():
                 current_user_type = bfilecontents[0]
                 found_id = bfilecontents[1][0]
 
-                current_user_data = fetchAccountInfo(found_id)
+                current_user_data = fetchAccountInfo(found_id, str(current_user_type))
 
                 colorify(f"Succesfully logged in as {current_user_data[1]}.", 'success') #Succesfully logged in as zeeman4
                 
@@ -546,7 +548,8 @@ def make_new_record(ordered_table, name, usertype):
             add_value_to_table("patients", ['PatientID', 'Name'], new_patient_data)
 
             confirm_data = retreiveData('patients', allColumns=True)
-
+            if debug:
+                colorify(f"Updated patients table: {confirm_data}")
             log(f"Updated patients table: {confirm_data}")
 
             current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]], returnAllData=False)
@@ -985,7 +988,7 @@ while True:
     print('\n\n')
     updateAppointments(current_user_type)
 
-    current_user_data = fetchAccountInfo(current_user_data[0]) #update account info if info was edited.
+    current_user_data = fetchAccountInfo(current_user_data[0], current_user_type) #update account info if info was edited.
     colorify(f'Account:', 'info')
     makePrettyTable(fetchTableNameFromUserType(current_user_type)[0], current_user_data, makeHeader=False)
 
