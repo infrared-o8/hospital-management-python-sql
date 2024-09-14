@@ -121,10 +121,10 @@ def makePrettyTable(tableName, data):
     
     #create PrettyTable with the column names
     if data and checkIfNonNull(data) == True:
-        if table_name.endswith(';'):
-            print_header(tableName)
+        if tableName.endswith(';'):
+            print_header(tableName[:-1])
         else:
-            print_header(tableName[:-2])
+            print_header(tableName)
         table = PrettyTable([columnNames[x][0] for x in range(len(columnNames))])
         #table.border = True
         #table.hrules = FRAME  # Add horizontal rules
