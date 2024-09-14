@@ -48,6 +48,15 @@ init(autoreset=True)
 
 months = {1: 'Jan', 2: 'Feb', 3:'Mar', 4:'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10:'Oct', 11:'Nov', 12:'Dec'}
 
+MESSAGE_STYLES = {
+    'success': {'symbol': '✅', 'color': 'light_green'},
+    'error': {'symbol': '❌', 'color': 'light_red'},
+    'ask': {'symbol': '🔴', 'color': 'yellow'},
+    'fatalerror': {'symbol': '💀', 'color': 'red'},
+    'preheader': {'symbol': '🟡', 'color': 'white'},
+    'info': {'symbol': 'ℹ️', 'color': 'light_blue'},
+    'debug': {'symbol': '🐞', 'color': 'magenta'}
+}
 
 def friendlyYear(yeariso: str, convertMD: bool = False) -> str:
     split = str(yeariso).split('-')
@@ -64,16 +73,6 @@ def slow_print(message, color, delay=0.02, end=False):
         time.sleep(delay)
     if not end:
         print()
-
-MESSAGE_STYLES = {
-    'success': {'symbol': '✅', 'color': 'light_green'},
-    'error': {'symbol': '❌', 'color': 'light_red'},
-    'ask': {'symbol': '🔴', 'color': 'yellow'},
-    'fatalerror': {'symbol': '💀', 'color': 'red'},
-    'preheader': {'symbol': '🟡', 'color': 'white'},
-    'info': {'symbol': 'ℹ️', 'color': 'light_blue'},
-    'debug': {'symbol': '🐞', 'color': 'magenta'}
-}
 
 def print_header(header_text: str = "Table"):
     print(colored(f"{'*'*10} {header_text.upper()} {'*'*10}", 'yellow', attrs=['bold', 'reverse']))
@@ -174,10 +173,6 @@ def viewPendingRequests():
         if len(signUpRequests) > 0:
             colorify('Pending signup requests:\n', 'preheader')
             makePrettyTable('admin_requests', signUpRequests)
-        '''        c.execute(f'select * from admin_requests where requestReason = \'{request_promotion}\'')
-        promotionRequests = c.fetchall()
-        if len(promotionRequests) > 0:
-            print('Pending promotion requests:', promotionRequests)'''
         return signUpRequests
 
 def dealWithPendingRequests():
@@ -198,23 +193,7 @@ def dealWithPendingRequests():
             c.execute(f'delete from admin_requests where requestID = "{req[0]}";')
             database.commit()
             continue
-    #deal with promotionReq
-        '''    for req in promotionReq:
-        name = req[2]
-        id = returnNewID('admins')
-        print(f"Approve pending promotion of {name} as admin:")
-        choice = int(input(zampy.make_menu_from_options()))
-        if choice == 1:
-            #delete from admin_requests
-            c.execute(f'delete from admin_requests where requestID = "{req[0]}";')
-            database.commit()
-            #add new user to credentials and admin table
-            add_value_to_table('admins', ['adminID', 'adminName'], [id, name])
-            existingPassword = retreiveData('credentials', columnNames=['password'], conditionNames=['userID'], conditionValues=[id])
-            if checkIfNonNull(existingPassword):
-                add_value_to_table('credentials', ['userID', 'password'], [existingPassword])
-        else:
-            continue'''
+
 def log(text):
     file = None
     try:
@@ -338,9 +317,6 @@ def updateAppointments(current_user_type):
                     timeInput = zampy.choose_time()
                     timeDateTime = datetime.strptime(timeInput, "%H:%M").time()
                     #check if the patient has another appointment at chosen time
-                    #appointDateTimeFormat = datetime.strptime(appointmentTime, "%H:%M").time() 
-                    #check if the patient has another appointment at chosen time
-                    #todayStr = str(datetime.today().date())
                     #ensure time doesnt overlap.
                     if timeDateTime > datetime.now().time(): #check if its not in the past
                         #with Halo(text='Retrieving data...', spinner=spinnerType):
@@ -449,7 +425,6 @@ def updateAppointments(current_user_type):
 def start_program():
     global current_user_type
     global current_user_data
-    #signUpLoginPage()
     try:
         bfile = open(login_file, "rb")
         bfilecontents = pickle.load(bfile)
@@ -530,18 +505,10 @@ def make_new_record(ordered_table, name, usertype):
             new_p_bytes = new_p.encode('utf-8')
             add_value_to_table("credentials", ['userid', 'password'], [new_patient_id, new_p])
             add_value_to_table("patients", ['PatientID', 'Name'], new_patient_data)
-            #database.commit()
-
-            #c.execute("select * from patients")
-            #confirm_data = c.fetchall()
 
             confirm_data = retreiveData('patients', allColumns=True)
 
-            #print("Updated patients table\n")
-            #makePrettyTable('patients', confirm_data)
             log(f"Updated patients table: {confirm_data}")
-            #c.execute(f"select * from patients where PatientID = '{new_patient_data[0]}'")
-            #current_user_data = c.fetchone()
 
             current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]], returnAllData=False)
 
@@ -573,31 +540,6 @@ def make_new_record(ordered_table, name, usertype):
 
             bfile = open(login_file, "wb")
             pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
-            '''elif usertype == "A":
-            new_admin_id = f"{incrementNumericPart(getHighestID(ordered_table))}"
-            new_admin_data = [new_admin_id, name]
-
-            #c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)
-            #database.commit()
-            new_p = askForPassword()
-            new_p_bytes = new_p.encode('utf-8')
-            add_value_to_table("credentials", ['userid', 'password'], [new_admin_id, new_p])
-            add_value_to_table("admins", ['adminID', 'Name'], new_admin_data)
-
-            #c.execute("select * from doctors")
-            #confirm_data = c.fetchall()
-
-            confirm_data = retreiveData('admins', allColumns=True)
-            print("Updated admins table\n", confirm_data)
-            log(f"Updated admins table: {confirm_data}")
-            #c.execute(f"select * from doctors where doctorID = '{new_doctor_data[0]}'")
-            #current_user_data = c.fetchone()
-
-            current_user_data = retreiveData("admins", allColumns=True, conditionNames=['adminID'], conditionValues=[new_admin_data[0]], returnAllData=False)
-
-
-            bfile = open(login_file, "wb")
-            pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)'''
 
 def signup(user_type):
     global current_user_data
@@ -700,22 +642,12 @@ def signup(user_type):
             colorify("Admin record doesn't exist! Making new record...", 'info')
             requestExistingAdminToSignUp(admin_name)
 
-            #doesnt exist, make a new record.
-            #make_new_record(ordered_doctor_table, doctor_name, user_type)
-
-
 def login(user_type):
     global current_user_data
     global current_user_type
     if user_type == "P":
         requested_id = (input("Enter patient ID: "))
-        #c.execute(f"select * from patients where patientid = '{requested_id}'")
-        #record = c.fetchone()
-
         record = retreiveData("patients", conditionNames=['patientID'], conditionValues=[requested_id], returnAllData=False)
-       # if record:
-           # password = input(f"Record found. Enter password for {record[1]}:")
-
         if record is None:
             requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
@@ -819,39 +751,25 @@ def attain_creds(currentUserType):
             login(current_user_type)
 
 def viewPatientDetails(patientID):
-    #c.execute(f"select * from patients where PatientID = '{patientID}'")
-    #return c.fetchone()
     return retreiveData("patients", conditionNames=['patientID'], conditionValues=[patientID], returnAllData=False)
 
 def viewDoctorDetails(doctorID):
-    #c.execute(f"select * from doctors where doctorID = '{doctorID}'")
-    #return c.fetchone()
     return retreiveData("doctors", conditionNames=['doctorID'], conditionValues=[doctorID], returnAllData=False)
     
 
 def viewPrescriptions(pID = None, all = True):
     if all:
-        #c.execute("select * from prescriptions")
-        #return c.fetchall()
-
         return retreiveData("prescriptions", allColumns=True)
     else:
         if pID:
-            #c.execute(f"select * from prescriptions where prescriptionID = '{pID}'")
             return retreiveData("prescriptions", allColumns=True, returnAllData=False, conditionNames=['prescriptionID'], conditionValues=[pID])
 
 def viewRecordDetails(patientID ,recordID = None, doctorID = None, all = False):
     if recordID:
-        #c.execute(f"select * from medicalhistory where recordID = '{recordID}' AND patientID = '{patientID}'")
-        #return c.fetchone()
         return retreiveData("medicalhistory", True, conditionNames=['recordID', 'patientID'], conditionValues=[recordID, patientID])
     if doctorID:
-        #c.execute(f"select * from medicalhistory where doctorID = '{doctorID}' AND patientID = '{patientID}'")
-        #return c.fetchall()
         return retreiveData("medicalhistory", True, conditionNames=['doctorID', 'patientID'], conditionValues=[doctorID, patientID])
     if all:
-        #c.execute(f"select * from medicalhistory where patientID = '{patientID}'")
-        #return c.fetchall()
         return retreiveData("medicalhistory", True, conditionNames=['patientID'], conditionValues=[patientID])
 
 def add_value_to_table(tableName, columnNames: list, values: list):
@@ -869,9 +787,6 @@ def add_value_to_table(tableName, columnNames: list, values: list):
 def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = None, conditionNames: list = None, conditionValues: list = None, returnAllData:bool = True):
     '''Assumes all conditions to be seperated by AND for now.'''
     command = "select"
-    #stop_event = threading.Event()
-    #spinner_thread = threading.Thread(target=loading, args=(stop_event,))
-    #spinner_thread.start()
     if columnNames == None:
         allColumns = True
     if tableName:
@@ -918,17 +833,10 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
         else:
             data = c.fetchone()
         return data
-    #finally:
-        #stop_event.set()
-        #spinner_thread.join()  # Wait for the spinner to stop
-        #sys.stdout.write('\b')            # erase the last character
 
 def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appointmentReason):
     if patientID and doctorID and appointmentDate and appointmentReason and appointmentTime:
-        #fetch existing appointments
-        #c.execute("select * from appointments")
-        #data = c.fetchall()
-        
+
         data = retreiveData('appointments')
 
         if zampy.checkEmpty(data):
@@ -1023,19 +931,15 @@ def resetMenuOptions(current_user_type):
     options_menu_str, options_dict = zampy.make_menu_from_options(options, True)
     return all_options, options_menu_str, options_dict
 all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
-#Doctor's/Patients Panel
-
 
 result = pyfiglet.figlet_format('Hospital Management System', font='standard')
 print(colored(result, 'yellow'))
 
 start_program()
 
-
 while True:
     while checkIfNonNull(current_user_data) == False or checkIfNonNull(current_user_type) == False:
         start_program()
-    #    all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     print('\n\n')
     updateAppointments(current_user_type)
