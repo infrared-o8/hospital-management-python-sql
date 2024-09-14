@@ -15,11 +15,13 @@ import pyfiglet #text
 import time
 import itertools, sys
 from tqdm import tqdm #progress bar
-import threading
-
 from halo import Halo
+
+
 spinnerType = 'dots'
 #database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
+
+
 with Halo(text='Connecting to mysql', spinner=spinnerType):
     database = mysql.connector.connect(host="192.168.100.48", user = "remote_user", password="remote", database="hospital_main")
     c = database.cursor()
@@ -870,13 +872,14 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
                             log(f"Doctor already has appointment at that time: {convertTime(potentialDoctorBusy)}")
                         else:
                             add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
+                            colorify("Succeeded in making appointment!", 'success')
                             if debug:
-                                colorify("Succeeded in making appointment!", 'success')
                                 log('Succeeded in making appointment!')
                 else:
                     colorify("Time cannot be chosen in the past.", 'error')
             elif appointmentDate > todayStr:
-                colorify("appointmentdate chosen was after today!", 'debug')
+                if debug:
+                    colorify("appointmentdate chosen was after today!", 'debug')
                 #ensure time doesnt overlap.
                 c.execute(f"select * from appointments where LOWER(patientID) = '{current_user_data[0].lower()}' and '{appointmentDate}' = appointmentDate and appointmentTime = '{appointmentTime}'")
                 potentialPatientAlreadyHasAppointment = c.fetchall()
@@ -891,9 +894,9 @@ def makeAppointment(patientID, doctorID, appointmentDate, appointmentTime, appoi
                     if len(potentialDoctorBusy) > 0:
                         colorify("Sorry! The doctor is busy at that time. Please try another time.", 'error')
                     else:
-                        add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])
+                        add_value_to_table('appointments', ['appointmentID', 'patientID', 'doctorID', 'appointmentDate', 'appointmentTime', 'appointmentReason', 'status'], [appointmentID, patientID, doctorID, appointmentDate, appointmentTime, appointmentReason, "Scheduled"])               
+                        colorify("Succeeded in making appointment!", 'success')
                         if debug:
-                            colorify("Succeeded in making appointment!", 'success')
                             log("Succeeded in making appointment!")
         else:
             colorify("Cant choose a date in the past!", 'error')
