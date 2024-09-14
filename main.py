@@ -17,7 +17,7 @@ from tqdm import tqdm #progress bar
 import threading
 
 
-database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
+database = mysql.connector.connect(host="192.168.100.48", user = "remote_user", password="remote", database="hospital_main")
 c = database.cursor()
 #c = database.cursor(buffered=True)
 
