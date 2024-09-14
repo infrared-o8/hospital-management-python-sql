@@ -158,7 +158,7 @@ def fetchColumns(tableName):
     else:
         return None
 
-def makePrettyTable(tableName, data):
+def makePrettyTable(tableName, data, makeHeader: bool = True):
     # fetch column names for the table
     #c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'{tableName}'")
     columnNames = fetchColumns(tableName)
@@ -166,10 +166,11 @@ def makePrettyTable(tableName, data):
         return
     #create PrettyTable with the column names
     if data and checkIfNonNull(data) == True:
-        if tableName.endswith(';'):
-            print_header(tableName[:-1])
-        else:
-            print_header(tableName)
+        if makeHeader == True:
+            if tableName.endswith(';'):
+                print_header(tableName[:-1])
+            else:
+                print_header(tableName)
         if debug:
             colorify(f'{[columnNames[x] for x in range(len(columnNames))]}', 'debug')
         table = ColorTable([columnNames[x] for x in range(len(columnNames))], theme=Themes.FOREST)
@@ -973,13 +974,18 @@ start_program()
 while True:
     while checkIfNonNull(current_user_data) == False or checkIfNonNull(current_user_type) == False:
         start_program()
+    
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     print('\n\n')
     updateAppointments(current_user_type)
-    current_user_data = fetchAccountInfo(current_user_data[0]) #update account info if info was edited.
 
-    colorify(f'Account: {current_user_data}', 'info')
+    current_user_data = fetchAccountInfo(current_user_data[0]) #update account info if info was edited.
+    colorify(f'Account:', 'info')
+    makePrettyTable(fetchTableNameFromUserType(current_user_type)[0], current_user_data, makeHeader=False)
+
     log(f"Account used: {current_user_type}")
+
+
     colorify("Enter action: ", 'ask')
     try:
         tempIndex = int(input(options_menu_str))
@@ -1142,8 +1148,8 @@ while True:
                     colorify(user_record, 'debug') 
                 for index in range(len(user_record)):
                     datavalue = user_record[index]
+                    columnName = allColumns[index]
                     if checkIfNonNull(datavalue) == False:
-                        columnName = allColumns[index]
                         colorify(f'{columnName} was found to be empty. Enter data now?', 'ask')
                         choice = int(input(zampy.make_menu_from_options()))
                         if choice == 1:
@@ -1176,6 +1182,44 @@ while True:
                                 colorify(f'Succesfully updated {columnName}.', 'success')
                         else:
                             continue 
+                    else:
+                        if 'id' in columnName.lower():
+                            continue
+                        colorify(f'Would you like to edit {columnName}? (Current Value: {datavalue})', 'ask')
+                        confirmEdit = int(input(zampy.make_menu_from_options()))
+                        if confirmEdit == 1:
+                            #colorify(f'{columnName} was found to be empty. Enter data now?', 'ask')
+                            #choice = int(input(zampy.make_menu_from_options()))
+                            #if choice == 1:
+                                #c.execute(f'SELECT frs.name, frs.system_type_name FROM sys.dm_exec_describe_first_result_set("select * from {tablename}",NULL,NULL) frs;')
+                            datatypehere = dict_columntypes[columnName.lower()]
+                            if 'date' in (datatypehere):
+                                if debug:
+                                    colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                input_data = zampy.choose_date()
+                            elif 'int' in (datatypehere):
+                                if debug:
+                                    colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                try:
+                                    input_data = int(input("Enter new data: "))
+                                except ValueError:
+                                    colorify('Enter data of correct type.', 'error')
+                                except Exception as e:
+                                    colorify(f'Some error occured: {e}', 'error')
+                            else:
+                                if debug:
+                                    colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                input_data = input('Enter new data: ')
+                            try:
+                                c.execute(f'update {tablename} set {columnName} = "{input_data}" where {id} = "{current_user_data[0]}"')
+                                database.commit()
+                            except Exception as e:
+                                colorify(f'Error while trying to edit data: {e}', 'error')
+                                log(f'Error while trying to edit data for {current_user_data}: {e}')
+                            else:
+                                colorify(f'Succesfully updated {columnName}.', 'success')
+                        else:
+                            continue
             elif index == 11:
                 #Log out
                 current_user_data = None
