@@ -280,7 +280,7 @@ def choose_date():
     return cal.get_date()
 
 def choose_time():
-    """Open a graphical popup to input time. Returns time in 'HOURS:MINUTES:SECONDS' format."""
+    """Open a graphical popup to input time. Returns time in 'HOURS:MINUTES' format."""
     print('Choose time: ')
     root = tk.Tk()
     root.withdraw()  # Hide the main window

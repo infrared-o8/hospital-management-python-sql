@@ -320,8 +320,11 @@ def updateAppointments(current_user_type):
             appointmentsPendingLater = c.fetchall()
 
         if len(appointmentsPendingLater) > 0:
+            colorify(f"You have an appointment scheduled with: ", 'info')
             for appointment in appointmentsPendingLater:
-                colorify(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {friendlyYear(appointment[3], convertMD=True)} at {convertTime(appointment[-1])}", 'info')
+                colorify(f"\t\tDr. {viewDoctorDetails(appointment[2])[1]} on {friendlyYear(appointment[3], convertMD=True)} at {convertTime(appointment[-1])}", 'info')
+                #else:
+                #    colorify(f"You have an appointment scheduled with Dr. {viewDoctorDetails(appointment[2])[1]} on {friendlyYear(appointment[3], convertMD=True)} at {convertTime(appointment[-1])}", 'info')
         if len(appointmentsPendingToday) > 0:
             for appointment in appointmentsPendingToday:
                 if checkIfNonNull(appointment[6]) == True:
@@ -484,7 +487,8 @@ def start_program():
             colorify("Input was of incorrect datatype. Try again...\n", 'error')
             start_program()
         else:
-            attain_creds(current_user_type)
+            if checkIfNonNull(current_user_data) == False:
+                attain_creds(current_user_type)
     else:
         name = bfilecontents[1][1]
         colorify(f"Found an existing login file for {name}. Confirm login with these credentials?", 'ask')
@@ -497,7 +501,7 @@ def start_program():
 
                 current_user_data = fetchAccountInfo(found_id)
 
-                colorify(f"Succesfully logged in as {current_user_data[1]}.", 'success')
+                colorify(f"Succesfully logged in as {current_user_data[1]}.", 'success') #Succesfully logged in as zeeman4
                 
             else:
                 incorrectPassword()
@@ -520,7 +524,8 @@ def start_program():
                 colorify("Input was of incorrect datatype. Try again...\n", 'error')
                 start_program()
             else:
-                attain_creds(current_user_type)
+                if checkIfNonNull(current_user_data) == False:
+                    attain_creds(current_user_type)
 
 
 
@@ -694,7 +699,7 @@ def login(user_type):
             #print("cpassword:", cpassword)
             if checkPasswords(cpassword, record[1]):
                 current_user_data = record
-                colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
+                colorify(f"Succesfully logged in as {current_user_data[1]}.", 'success') #Succesfully logged in as zeeman4
                 bfile = open(login_file, "wb")
                 pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
             else:
@@ -1185,14 +1190,17 @@ while True:
                     else:
                         if 'id' in columnName.lower():
                             continue
-                        colorify(f'Would you like to edit {columnName}? (Current Value: {datavalue})', 'ask')
+                        datatypehere = dict_columntypes[columnName.lower()]
+                        if 'date' in datatypehere:
+                            colorify(f'Would you like to edit {columnName}? (Current Value: {friendlyYear(datavalue, convertMD=True)})', 'ask')
+                        else:
+                            colorify(f'Would you like to edit {columnName}? (Current Value: {datavalue})', 'ask')
                         confirmEdit = int(input(zampy.make_menu_from_options()))
                         if confirmEdit == 1:
                             #colorify(f'{columnName} was found to be empty. Enter data now?', 'ask')
                             #choice = int(input(zampy.make_menu_from_options()))
                             #if choice == 1:
                                 #c.execute(f'SELECT frs.name, frs.system_type_name FROM sys.dm_exec_describe_first_result_set("select * from {tablename}",NULL,NULL) frs;')
-                            datatypehere = dict_columntypes[columnName.lower()]
                             if 'date' in (datatypehere):
                                 if debug:
                                     colorify(f'{columnName} is of type {datatypehere}', 'debug')
