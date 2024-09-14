@@ -12,6 +12,7 @@ import getpass #password
 from termcolor import colored, cprint #text 
 from colorama import init #text
 import pyfiglet #text
+#import pyfiglet.fonts
 import time
 import itertools, sys
 from tqdm import tqdm #progress bar
