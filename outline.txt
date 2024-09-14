@@ -75,3 +75,4 @@ https://stackoverflow.com/questions/13626406/setting-focus-to-specific-tkinter-e
 https://stackoverflow.com/questions/1054984/how-can-i-get-column-names-from-a-table-in-sql-server
 https://www.geeksforgeeks.org/creating-tables-with-prettytable-library-python/
 https://stackoverflow.com/questions/4995733/how-to-create-a-spinning-command-line-cursor
+https://stackoverflow.com/questions/59770278/how-to-query-for-column-datatypes-of-mssql-table-from-python

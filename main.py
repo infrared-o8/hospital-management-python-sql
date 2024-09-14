@@ -116,6 +116,17 @@ def colorify(message, type, end=False):
     else:
         slow_print(f"[{symbol}]\t{message}", color, end=True)
 
+def fetchTableNameFromUserType(current_user_type):
+    tablename = None
+    if current_user_type == 'P':
+        tablename = 'patients'
+    elif current_user_type == 'D':
+        tablename = 'doctors'
+    elif current_user_type == 'A':
+        tablename = 'admins'
+    id = tablename[:-1] + 'ID'
+    return tablename, id
+
 def checkIfNonNull(variable):
     '''If null, returns False.'''
     if variable in [None, 'None', 'NULL', 'Null', (None,), ('NULL',), (), '', [], {}]:
@@ -128,16 +139,31 @@ def checkIfNonNull(variable):
 def returnNewID(tableName):
     return incrementNumericPart(getHighestID(retreiveData(tableName)))
 
+def fetchAccountInfo(requiredID):
+    with Halo(text='Retrieving data...', spinner=spinnerType):
+        tablename, id = fetchTableNameFromUserType(current_user_type)
+
+        c.execute(f'select * from {tablename} where {id} = "{requiredID}"')
+        return c.fetchone()
+
+def fetchColumns(tableName):
+    if checkIfNonNull(tableName) == True:
+        with Halo(text='Retrieving data...', spinner=spinnerType):
+            c.execute(f'select * from {tableName}')
+            #columnNames = c.fetchall()
+            sampleData = c.fetchall()
+        del sampleData
+        columnNames = [desc[0] for desc in c.description]
+        return columnNames
+    else:
+        return None
+
 def makePrettyTable(tableName, data):
     # fetch column names for the table
     #c.execute(f"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'{tableName}'")
-    with Halo(text='Retrieving data...', spinner=spinnerType):
-        c.execute(f'select * from {tableName}')
-        #columnNames = c.fetchall()
-        sampleData = c.fetchall()
-    del sampleData
-    columnNames = [desc[0] for desc in c.description]
-
+    columnNames = fetchColumns(tableName)
+    if checkIfNonNull(columnNames) == False:
+        return
     #create PrettyTable with the column names
     if data and checkIfNonNull(data) == True:
         if tableName.endswith(';'):
@@ -211,6 +237,7 @@ def askForPassword(name: str = "current user"):
     return inpPassword
 
 def checkPasswords(correct_password: str, name: str = "current user", usebcrypt = False) -> bool:
+    '''Asks for a password, and checks it against correct_password. If name is provided, input() will contain name.'''
     inpPassword = askForPassword(name)
     if usebcrypt:
         if bcrypt.checkpw(inpPassword.encode('utf-8'), correct_password):
@@ -465,7 +492,10 @@ def start_program():
             #print("found)user_password", found_user_password)
             if checkPasswords(found_user_password, name, usebcrypt=True):
                 current_user_type = bfilecontents[0]
-                current_user_data = bfilecontents[1]
+                found_id = bfilecontents[1][0]
+
+                current_user_data = fetchAccountInfo(found_id)
+
                 colorify(f"Succesfully logged in as {current_user_data[1]}.", 'success')
                 
             else:
@@ -488,8 +518,8 @@ def start_program():
             except ValueError:
                 colorify("Input was of incorrect datatype. Try again...\n", 'error')
                 start_program()
-            #else:
-            #    attain_creds(current_user_type)
+            else:
+                attain_creds(current_user_type)
 
 
 
@@ -913,9 +943,9 @@ def resetMenuOptions(current_user_type):
                     'View pending requests', 
                     'View table',
                     'Execute custom SQL command',
+                    'Edit your data',
                     'Log out',
                     'Log in',
-                    #'Edit data',
                     'Exit'] #also update own info, group doctors by specialization, view pending appointments
     options = ['View a patient\'s details' if current_user_type == "D" else None, 
                'View a doctor\'s details', 
@@ -927,7 +957,7 @@ def resetMenuOptions(current_user_type):
                'View pending requests' if current_user_type == 'A' else None, 
                'View table' if current_user_type == 'A' else None,
                'Execute custom SQL command' if current_user_type == 'A' else None,
-               #'Edit data' if current_user_type == 'A' else None,
+               'Edit your data' if current_user_type != None else None,
                'Log out' if current_user_data != None else None,
                'Log in' if current_user_data == None else None,
                'Exit']
@@ -946,6 +976,8 @@ while True:
     all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
     print('\n\n')
     updateAppointments(current_user_type)
+    current_user_data = fetchAccountInfo(current_user_data[0]) #update account info if info was edited.
+
     colorify(f'Account: {current_user_data}', 'info')
     log(f"Account used: {current_user_type}")
     colorify("Enter action: ", 'ask')
@@ -1090,13 +1122,68 @@ while True:
                 if checkIfNonNull(table):
                     '''
             elif index == 10:
+                #Edit your data
+                tablename, id = fetchTableNameFromUserType(current_user_type)
+                c.execute(f'select * from {tablename} where {id} = "{current_user_data[0]}"')
+                user_record = c.fetchone()
+                c.execute(f'SELECT column_name, data_type FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = "{tablename}";')
+                columntypestuples = c.fetchall()
+                dict_columntypes = dict()
+                
+                for column_tuple in columntypestuples:
+                    dict_columntypes[column_tuple[0].lower()] = column_tuple[1] #name = type
+                
+                if debug:
+                    colorify(dict_columntypes, 'debug')
+
+                allColumns = fetchColumns(tablename)
+
+                if debug:
+                    colorify(user_record, 'debug') 
+                for index in range(len(user_record)):
+                    datavalue = user_record[index]
+                    if checkIfNonNull(datavalue) == False:
+                        columnName = allColumns[index]
+                        colorify(f'{columnName} was found to be empty. Enter data now?', 'ask')
+                        choice = int(input(zampy.make_menu_from_options()))
+                        if choice == 1:
+                            #c.execute(f'SELECT frs.name, frs.system_type_name FROM sys.dm_exec_describe_first_result_set("select * from {tablename}",NULL,NULL) frs;')
+                            datatypehere = dict_columntypes[columnName.lower()]
+                            if 'date' in (datatypehere):
+                                if debug:
+                                    colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                input_data = zampy.choose_date()
+                            elif 'int' in (datatypehere):
+                                if debug:
+                                    colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                try:
+                                    input_data = int(input("Enter data: "))
+                                except ValueError:
+                                    colorify('Enter data of correct type.', 'error')
+                                except Exception as e:
+                                    colorify(f'Some error occured: {e}', 'error')
+                            else:
+                                if debug:
+                                    colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                input_data = input('Enter data: ')
+                            try:
+                                c.execute(f'update {tablename} set {columnName} = "{input_data}" where {id} = "{current_user_data[0]}"')
+                                database.commit()
+                            except Exception as e:
+                                colorify(f'Error while trying to edit data: {e}', 'error')
+                                log(f'Error while trying to edit data for {current_user_data}: {e}')
+                            else:
+                                colorify(f'Succesfully updated {columnName}.', 'success')
+                        else:
+                            continue 
+            elif index == 11:
                 #Log out
                 current_user_data = None
                 current_user_type = None
-            elif index == 11:
+            elif index == 12:
                 #Log in
                 start_program()
-            elif index == 12:
+            elif index == 13:
                 colorify("Thank you for using this program.", 'success')
                 exit()
             else:
