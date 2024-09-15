@@ -23,7 +23,7 @@ spinnerType = 'dots'
 #database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 
 
-with Halo(text='Connecting to mysql', spinner=spinnerType):
+with Halo(text='Connecting to mysql...', spinner=spinnerType):
     database = mysql.connector.connect(host="192.168.100.48", user = "remote_user", password="remote", database="hospital_main")
     c = database.cursor()
 #c = database.cursor(buffered=True)
@@ -100,7 +100,7 @@ def convertTime(rawTime):
     # Return formatted time
     return f"{hour}:{minutes} {period}"
 
-def colorify(message, type, end=False):
+def colorify(message, type='info', end=False):
     style = MESSAGE_STYLES.get(type, {'symbol': '❔', 'color': 'white'})
     symbol = style['symbol']
     color = style['color']
@@ -458,6 +458,29 @@ def start_program():
         found_user_type = bfilecontents[0]
         found_user_data = bfilecontents[1]
         found_user_password = bfilecontents[2]
+    except FileNotFoundError:
+        colorify('The login-file was not found. Proceeding to normal login...', 'error')
+        try:
+            colorify("Using as:\n", 'ask')
+            user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
+            if user == 1:
+                #logging in as patient
+                current_user_type = 'P'
+            elif user == 2:
+                #logging in as doctor
+                current_user_type = 'D'
+            elif user == 3:
+                current_user_type = 'A'
+            else:
+                colorify("Something went wrong. Try again...\n", 'error')
+                start_program()
+        except ValueError:
+            colorify("Input was of incorrect datatype. Try again...\n", 'error')
+            start_program()
+        else:
+            if checkIfNonNull(current_user_data) == False:
+                attain_creds(current_user_type)
+
     except Exception as e:
         colorify(f"Some error occured while trying to access login file.", 'error')
         if debug:
@@ -546,9 +569,11 @@ def make_new_record(ordered_table, name, usertype):
             log(f"Updated patients table: {confirm_data}")
 
             current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]], returnAllData=False)
-
-            bfile = open(login_file, "wb")
-            pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
+            colorify('One time login?', 'ask')
+            onetimelogin = int(input(zampy.make_menu_from_options()))
+            if onetimelogin == 2:
+                bfile = open(login_file, "wb")
+                pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
         elif usertype == "D":
             new_doctor_id = f"{incrementNumericPart(getHighestID(ordered_table))}"
             new_doctor_data = [new_doctor_id, name]
@@ -572,9 +597,11 @@ def make_new_record(ordered_table, name, usertype):
 
             current_user_data = retreiveData("doctors", allColumns=True, conditionNames=['DoctorID'], conditionValues=[new_doctor_data[0]], returnAllData=False)
 
-
-            bfile = open(login_file, "wb")
-            pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
+            colorify('One time login?', 'ask')
+            onetimelogin = int(input(zampy.make_menu_from_options()))
+            if onetimelogin == 2:
+                bfile = open(login_file, "wb")
+                pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
 
 def signup(user_type):
     global current_user_data
@@ -697,8 +724,12 @@ def login(user_type):
             if checkPasswords(cpassword, record[1]):
                 current_user_data = record
                 colorify(f"Succesfully logged in as {current_user_data[1]}.", 'success') #Succesfully logged in as zeeman4
-                bfile = open(login_file, "wb")
-                pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
+                
+                colorify('One time login?', 'ask')
+                onetimelogin = int(input(zampy.make_menu_from_options()))
+                if onetimelogin == 2:
+                    bfile = open(login_file, "wb")
+                    pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
             else:
                 incorrectPassword()
 
@@ -721,8 +752,11 @@ def login(user_type):
             if checkPasswords(cpassword, record[1]):
                 current_user_data = record
                 colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
-                bfile = open(login_file, "wb")
-                pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
+                colorify('One time login?', 'ask')
+                onetimelogin = int(input(zampy.make_menu_from_options()))
+                if onetimelogin == 2:
+                    bfile = open(login_file, "wb")
+                    pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
             else:
                 incorrectPassword()
     elif user_type == 'A':
