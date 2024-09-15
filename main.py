@@ -1002,7 +1002,7 @@ def resetMenuOptions(current_user_type):
     return all_options, options_menu_str, options_dict
 all_options, options_menu_str, options_dict = resetMenuOptions(current_user_type)
 
-result = pyfiglet.figlet_format('Hospital Management System', font='standard')
+result = pyfiglet.figlet_format('Hospital Management System', font='doom')
 print(colored(result, 'yellow'))
 
 start_program()
