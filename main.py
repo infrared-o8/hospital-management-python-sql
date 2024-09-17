@@ -24,8 +24,8 @@ spinnerType = 'dots'
 
 host = "sql12.freesqldatabase.com"
 db_name = "sql12731725"
-db_username = "sql12731725"
-db_password = "yTqjj5kfnh"
+db_username = os.getenv('DB_USERNAME')
+db_password = os.getenv('DB_PASSWORD')
 db_port = 3306
 with Halo(text='Connecting to mysql...', spinner=spinnerType):
     database = mysql.connector.connect(host=host, port=db_port, user = db_username, password=db_password, database=db_name)
