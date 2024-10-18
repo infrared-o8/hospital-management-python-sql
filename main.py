@@ -8,13 +8,10 @@ import bcrypt #password
 import os #login_file destination
 from pathlib import Path #login_file destination
 import getpass #password
-
 from termcolor import colored, cprint #text 
 from colorama import init #text
 import pyfiglet #text
-#import pyfiglet.fonts
 import time
-import itertools, sys
 from tqdm import tqdm #progress bar
 from halo import Halo
 
@@ -32,10 +29,9 @@ request_promotion = 'Request to Promote'
 directory = Path.home() / "HospitalManagement-PythonSQL"  # This creates a folder in the user's home directory
 
 debug = False
-# Create the directory if it doesn't exist
+
 os.makedirs(directory, exist_ok=True)
 
-# Define the login file path
 login_file = directory / "creds.dat"
 log_file = directory / 'log.txt'
 
