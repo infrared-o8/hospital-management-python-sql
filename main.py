@@ -24,7 +24,8 @@ spinnerType = 'dots'
 
 
 with Halo(text='Connecting to mysql...', spinner=spinnerType):
-    database = mysql.connector.connect(host="192.168.100.48", user = "remote_user", password="remote", database="hospital_main")
+    #database = mysql.connector.connect(host="sql103.infinityfree.com", user = "if0_37311731", password="FSvIoxl3mM", database="if0_37311731_hospital_main_1")
+    database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
     c = database.cursor()
 #c = database.cursor(buffered=True)
 
@@ -284,7 +285,13 @@ def makeNewPrescription(returnPCID = True):
                 makePrettyTable('prescriptions', existingPrescription)
                 prescriptionID = existingPrescription[0]
     else:
-        prescriptionID = returnNewID('prescriptions')
+        data = retreiveData('prescriptions')
+        prescriptionID = None
+        if zampy.checkEmpty(data):
+            prescriptionID = "PRC1"
+        else:
+            prescriptionID = f"{returnNewID('prescriptions')}"
+        #prescriptionID = returnNewID('prescriptions')
         dosage = input("Enter general dosage: ")
         add_value_to_table('prescriptions', ['prescriptionID', 'medication_name', 'dosage'], [prescriptionID, prescription, dosage])
         log(f'New prescription added with: {[prescriptionID, prescription, dosage]}')
@@ -553,7 +560,13 @@ def make_new_record(ordered_table, name, usertype):
         global current_user_type
         if usertype == "P":
             #new_patient_id = f"{usertype}{int(ordered_table[-1][0][1]) + 1}" #update thisss
-            new_patient_id = f"{incrementNumericPart(getHighestID(ordered_table))}" 
+            data = retreiveData('patients')
+            new_patient_id = None
+            if zampy.checkEmpty(data):
+                new_patient_id = "P1"
+            else:
+                new_patient_id = f"{returnNewID('patients')}"
+            #new_patient_id = f"{incrementNumericPart(getHighestID(ordered_table))}" 
             new_patient_data = [new_patient_id, name]
             #print(new_patient_id)
             #c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
