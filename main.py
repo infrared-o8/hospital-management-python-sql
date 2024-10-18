@@ -45,7 +45,7 @@ months = {1: 'Jan', 2: 'Feb', 3:'Mar', 4:'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8:
 MESSAGE_STYLES = {
     'success': {'symbol': '✅', 'color': 'light_green'},
     'error': {'symbol': '❌', 'color': 'light_red'},
-    'ask': {'symbol': '🔴', 'color': 'yellow'},
+    'ask': {'symbol': '🟡', 'color': 'yellow'},
     'fatalerror': {'symbol': '💀', 'color': 'red'},
     'preheader': {'symbol': '🟡', 'color': 'white'},
     'info': {'symbol': 'ℹ️', 'color': 'light_blue'},
@@ -1141,11 +1141,15 @@ while True:
             elif index == 8:
                 #View table
                 table_name = input("Enter table name to access: ")
-                with Halo(text='Retrieving data...', spinner=spinnerType):
-                    c.execute(f'select * from {table_name}')
-                    data = c.fetchall()
-                #print(data)
-                makePrettyTable(f'{table_name}', data)
+                try:
+                    with Halo(text='Retrieving data...', spinner=spinnerType):
+                        c.execute(f'select * from {table_name}')
+                        data = c.fetchall()
+                    #print(data)
+                    makePrettyTable(f'{table_name}', data)
+                except Exception as e:
+                    colorify(f'Error while trying to access table {table_name}. Details in log.txt', 'error')
+                    log(f'Error while trying to access table {table_name}: {e}')
             elif index == 9:
                 #Execute custom SQL command
                 sql_command = input("Enter sql command:\n")
@@ -1167,12 +1171,6 @@ while True:
                 else:
                     if debug:
                         colorify('No error in running command.', 'debug')
-                '''        elif index == 10:
-                #Edit data
-                table_name = input("Enter table name to access: ")
-                table = c.execute(f"select * from {table_name}")
-                if checkIfNonNull(table):
-                    '''
             elif index == 10:
                 #Edit your data
                 tablename, id = fetchTableNameFromUserType(current_user_type)
