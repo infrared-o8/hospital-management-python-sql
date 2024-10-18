@@ -1,9 +1,0 @@
-mysql-connector-python
-prettytable
-bcrypt
-termcolor
-pyfiglet
-tqdm
-getpass
-datetime
-halo
