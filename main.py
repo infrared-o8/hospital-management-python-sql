@@ -22,7 +22,11 @@ from halo import Halo
 spinnerType = 'dots'
 #database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
 
-
+host = "sql12.freesqldatabase.com"
+db_name = "sql12731725"
+db_username = os.getenv('DB_USERNAME')
+db_password = os.getenv('DB_PASSWORD')
+db_port = 3306
 with Halo(text='Connecting to mysql...', spinner=spinnerType):
     #database = mysql.connector.connect(host="sql103.infinityfree.com", user = "if0_37311731", password="FSvIoxl3mM", database="if0_37311731_hospital_main_1")
     database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
