@@ -17,8 +17,10 @@ from halo import Halo
 
 
 spinnerType = 'dots'
-database = None
-c = None
+userinp = input('Enter SQL username: ')
+userpassword = input("Enter SQL password: ")
+database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword, database="hospital_main")
+c = database.cursor(buffered=True)
 
 current_user_type = None
 current_user_data = None

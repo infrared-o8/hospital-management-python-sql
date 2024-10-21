@@ -1,0 +1,8 @@
+mysql-connector-python
+prettytable
+bcrypt
+termcolor
+colorama
+pyfiglet
+tqdm
+halo
