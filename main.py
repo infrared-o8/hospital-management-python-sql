@@ -17,8 +17,8 @@ from halo import Halo
 
 
 spinnerType = 'dots'
-database = mysql.connector.connect(host="localhost", user = "root", password="admin", database="hospital_main")
-c = database.cursor(buffered=True)
+database = None
+c = None
 
 current_user_type = None
 current_user_data = None
@@ -467,7 +467,12 @@ def updateAppointments(current_user_type):
 def start_program():
     global current_user_type
     global current_user_data
-
+    global database
+    global c
+    userinp = input('SQL user: ')
+    userpassword = input('SQL password: ')
+    database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword, database="hospital_main")
+    c = database.cursor(buffered=True)
     c.execute("SHOW DATABASES LIKE 'hospital_main'")
     result = c.fetchone()
 
@@ -477,6 +482,8 @@ def start_program():
         success = execute_sql_file('hospital_main.sql', c)
         if success:
             colorify("Database created successfully.", 'success')
+            database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword, database="hospital_main")
+            c = database.cursor(buffered=True)
         else:
             colorify("Error creating database.", 'error')
     else:
