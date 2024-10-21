@@ -52,6 +52,24 @@ MESSAGE_STYLES = {
     'debug': {'symbol': '🐞', 'color': 'magenta'}
 }
 
+
+def execute_sql_file(filename, cursor):
+    with open(filename, 'r') as sql_file:
+        sql_commands = sql_file.read()
+
+        # Split commands by the semicolon
+        sql_commands_list = sql_commands.split(';')
+        
+        for command in sql_commands_list:
+            # Strip and check if the command is not empty
+            if command.strip():
+                try:
+                    cursor.execute(command)
+                except mysql.connector.Error as err:
+                    print(f"Error: {err}")
+                    return False
+    return True
+
 def friendlyYear(yeariso: str, convertMD: bool = False) -> str:
     split = str(yeariso).split('-')
     year, month, day = split[0], split[1], split[2]
@@ -449,6 +467,21 @@ def updateAppointments(current_user_type):
 def start_program():
     global current_user_type
     global current_user_data
+
+    c.execute("SHOW DATABASES LIKE 'hospital_main'")
+    result = c.fetchone()
+
+    if not result:
+        colorify("Database not found. Creating database...", 'info')
+        # Execute the SQL file to create the database
+        success = execute_sql_file('hospital_main.sql', c)
+        if success:
+            colorify("Database created successfully.", 'success')
+        else:
+            colorify("Error creating database.", 'error')
+    else:
+        colorify("Database already exists.", 'debug')
+
     try:
         bfile = open(login_file, "rb")
         bfilecontents = pickle.load(bfile)
