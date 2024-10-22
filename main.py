@@ -225,7 +225,7 @@ def askForPassword(name: str = "current user"):
     return inpPassword
 
 def checkPasswords(correct_password: str, name: str = "current user", usebcrypt = False) -> bool:
-    '''Asks for a password, and checks it against correct_password. If name is provided, input() will contain name.'''
+    '''Asks for a password, and checks it against correct_password. If name is provided, input() will display name.'''
     inpPassword = askForPassword(name)
     if usebcrypt:
         if bcrypt.checkpw(inpPassword.encode('utf-8'), correct_password):
