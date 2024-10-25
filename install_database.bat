@@ -43,17 +43,5 @@ if %ERRORLEVEL% equ 0 (
     pause
     exit /b
 )
-
-:: Run the main Python script
-echo Running the main Python script...
-python main.py
-
-:: Check if the Python script executed successfully
-if %ERRORLEVEL% equ 0 (
-    echo Program executed successfully!
-) else (
-    echo There was an error running the program.
-)
-
 pause
 exit /b
