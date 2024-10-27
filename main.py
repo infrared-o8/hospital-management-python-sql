@@ -447,7 +447,31 @@ def updateAppointments(current_user_type):
                         c.execute(f"delete from appointments where LOWER(appointmentID) = '{appointment[0].lower()}'")
                         database.commit()
                     #delay mechanism?
-                    
+
+def vanilla_login():
+    global current_user_data
+    global current_user_type
+    try:
+        colorify("Using as:\n", 'ask')
+        user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
+        if user == 1:
+            #logging in as patient
+            current_user_type = 'P'
+        elif user == 2:
+            #logging in as doctor
+            current_user_type = 'D'
+        elif user == 3:
+            current_user_type = 'A'
+        else:
+            colorify("Something went wrong. Try again...\n", 'error')
+            start_program()
+    except ValueError:
+        colorify("Input was of incorrect datatype. Try again...\n", 'error')
+        start_program()
+    else:
+        if checkIfNonNull(current_user_data) == False:
+            attain_creds(current_user_type)
+
 def start_program():
     global current_user_type
     global current_user_data
@@ -508,7 +532,12 @@ def start_program():
                 attain_creds(current_user_type)
     else:
         id = bfilecontents[1][0]
-        name = fetchAccountInfo(id, str(found_user_type))[1]
+        try:
+            name = fetchAccountInfo(id, str(found_user_type))[1]
+        except TypeError:
+            colorify('Error occured while trying to read login file. Continuing to normal login...', 'error')
+            vanilla_login()
+            return None
         colorify(f"Found an existing login file for {name}. Confirm login with these credentials?", 'ask')
         confirmLogin = int(input(zampy.make_menu_from_options()))
         if confirmLogin == 1:
@@ -524,26 +553,7 @@ def start_program():
             else:
                 incorrectPassword()
         else:
-            try:
-                colorify("Using as:\n", 'ask')
-                user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
-                if user == 1:
-                    #logging in as patient
-                    current_user_type = 'P'
-                elif user == 2:
-                    #logging in as doctor
-                    current_user_type = 'D'
-                elif user == 3:
-                    current_user_type = 'A'
-                else:
-                    colorify("Something went wrong. Try again...\n", 'error')
-                    start_program()
-            except ValueError:
-                colorify("Input was of incorrect datatype. Try again...\n", 'error')
-                start_program()
-            else:
-                if checkIfNonNull(current_user_data) == False:
-                    attain_creds(current_user_type)
+            vanilla_login()
 
 
 
@@ -690,7 +700,7 @@ def signup(user_type):
                         incorrectPassword()
                 else:
                     colorify("The user was found with no password. Enter new password?", 'ask')
-                    choice = input(zampy.make_menu_from_options())
+                    choice = int(input(zampy.make_menu_from_options()))
                     if choice == 1:
                         colorify("Type a new ", 'ask',end=True)
                         newPassword = askForPassword()
