@@ -483,59 +483,29 @@ def start_program():
         found_user_password = bfilecontents[2]
     except FileNotFoundError:
         colorify('The login-file was not found. Proceeding to normal login...', 'error')
-        try:
-            colorify("Using as:\n", 'ask')
-            user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
-            if user == 1:
-                #logging in as patient
-                current_user_type = 'P'
-            elif user == 2:
-                #logging in as doctor
-                current_user_type = 'D'
-            elif user == 3:
-                current_user_type = 'A'
-            else:
-                colorify("Something went wrong. Try again...\n", 'error')
-                start_program()
-        except ValueError:
-            colorify("Input was of incorrect datatype. Try again...\n", 'error')
-            start_program()
-        else:
-            if checkIfNonNull(current_user_data) == False:
-                attain_creds(current_user_type)
-
+        vanilla_login()
+        return None
     except Exception as e:
         colorify(f"Some error occured while trying to access login file.", 'error')
         if debug:
-            colorify(f"Some error occured while trying to access login file. {e}", 'error')
+            colorify(f"Some error occured while trying to access login file: {e}", 'error')
         log(f"Some error occured while trying to access existing login-file: {e}.\nProceeding to normal login.")
         colorify("Proceeding to normal login...", 'error')
-        try:
-            colorify("Using as:\n", 'ask')
-            user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
-            if user == 1:
-                #logging in as patient
-                current_user_type = 'P'
-            elif user == 2:
-                #logging in as doctor
-                current_user_type = 'D'
-            elif user == 3:
-                current_user_type = 'A'
-            else:
-                colorify("Something went wrong. Try again...\n", 'error')
-                start_program()
-        except ValueError:
-            colorify("Input was of incorrect datatype. Try again...\n", 'error')
-            start_program()
-        else:
-            if checkIfNonNull(current_user_data) == False:
-                attain_creds(current_user_type)
+        vanilla_login()
+        return None
     else:
         id = bfilecontents[1][0]
         try:
-            name = fetchAccountInfo(id, str(found_user_type))[1]
-        except TypeError:
-            colorify('Error occured while trying to read login file. Continuing to normal login...', 'error')
+            nameInfo = fetchAccountInfo(id, str(found_user_type))
+            if checkIfNonNull(nameInfo) == True:
+                name = nameInfo[1]
+            else:
+                colorify('Login file found invalid credentials. Proceeding to normal login...', 'fatalerror')
+                vanilla_login()
+                return None
+        except Exception as e:
+            colorify(f'Error occured while trying to read login file: {e}. Continuing to normal login...', 'error')
+            log(f"Some error occured while trying to access existing login-file: {e}.\nProceeding to normal login.")
             vanilla_login()
             return None
         colorify(f"Found an existing login file for {name}. Confirm login with these credentials?", 'ask')
