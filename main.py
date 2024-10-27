@@ -2,7 +2,7 @@ import mysql.connector #sql
 from datetime import datetime, date #utilities
 import zampy
 from prettytable import PrettyTable, from_db_cursor, FRAME, ALL,colortable #utilities
-from prettytable.colortable import ColorTable, Themes
+from prettytable.colortable import ColorTable
 import pickle #utilities
 import bcrypt #password
 import os #login_file destination
@@ -160,7 +160,7 @@ def makePrettyTable(tableName, data, makeHeader: bool = True):
                 print_header(tableName)
         if debug:
             colorify(f'{[columnNames[x] for x in range(len(columnNames))]}', 'debug')
-        table = ColorTable([columnNames[x] for x in range(len(columnNames))], theme=Themes.FOREST)
+        table = ColorTable([columnNames[x] for x in range(len(columnNames))])
         #table.sortby = None
         #table.border = True
         #table.hrules = FRAME  # Add horizontal rules
