@@ -800,7 +800,6 @@ def login(user_type):
                 colorify("The user was found with no password. Enter new password?", 'ask')
                 choice = int(input(zampy.make_menu_from_options()))
                 if choice == 1:
-                    #print("Enter new",end="")
                     newPassword = askForPassword()
                     while newPassword == None or newPassword == "":
                         newPassword = askForPassword()
