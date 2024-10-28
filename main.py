@@ -15,13 +15,6 @@ import time
 from tqdm import tqdm #progress bar
 from halo import Halo
 
-
-spinnerType = 'dots'
-userinp = input('Enter SQL username: ')
-userpassword = input("Enter SQL password: ")
-database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword, database="hospital_main")
-c = database.cursor(buffered=True)
-
 current_user_type = None
 current_user_data = None
 
@@ -36,14 +29,7 @@ os.makedirs(directory, exist_ok=True)
 
 login_file = directory / "creds.dat"
 log_file = directory / 'log.txt'
-
-message_types = ['success', 'error', 'ask', 'fatalerror', 
-                 'preheader', 'info', 'debug']
-
-init(autoreset=True)
-
-months = {1: 'Jan', 2: 'Feb', 3:'Mar', 4:'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10:'Oct', 11:'Nov', 12:'Dec'}
-
+sql_creds = directory / 'sqlcreds.dat'
 MESSAGE_STYLES = {
     'success': {'symbol': '✅', 'color': 'light_green'},
     'error': {'symbol': '❌', 'color': 'light_red'},
@@ -54,14 +40,7 @@ MESSAGE_STYLES = {
     'debug': {'symbol': '🐞', 'color': 'magenta'}
 }
 
-def friendlyYear(yeariso: str, convertMD: bool = False) -> str:
-    split = str(yeariso).split('-')
-    year, month, day = split[0], split[1], split[2]
-    if convertMD:
-        return f"{day} {months[int(month)]} {year}"
-    return f"{day}/{month}/{year}"
-
-def slow_print(message, color, delay=0.02, end=False):
+def slow_print(message, color, delay=0.015, end=False):
     for char in message:
         #sys.stdout.write(char)
         #sys.stdout.flush()
@@ -69,6 +48,65 @@ def slow_print(message, color, delay=0.02, end=False):
         time.sleep(delay)
     if not end:
         print()
+
+def colorify(message, type='info', end=False):
+    style = MESSAGE_STYLES.get(type, {'symbol': '❔', 'color': 'white'})
+    symbol = style['symbol']
+    color = style['color']
+    if end == False:
+        slow_print(f"[{symbol}]\t{message}", color, end=False)
+    else:
+        slow_print(f"[{symbol}]\t{message}", color, end=True)
+
+spinnerType = 'dots'
+
+def vanilla_sql_login():
+    userinp = input('Enter SQL username: ')
+    userpassword = input("Enter SQL password: ")
+    colorify('Store SQL credentials?')
+    storeInFile = int(input(zampy.make_menu_from_options()))
+
+    if storeInFile == 1:
+        file = open(sql_creds, 'wb')
+        data = [userinp, userpassword]
+        pickle.dump(data, file)
+        file.close()
+    return userinp, userpassword
+
+userinp, userpassword = None, None
+
+try:
+    file = open(sql_creds, 'rb')
+except FileNotFoundError:
+    colorify('SQL creds file not found.', 'error')
+    userinp, userpassword = vanilla_sql_login()
+else:
+    data = pickle.load(file)
+    userinp, userpassword = data[0], data[1]
+
+
+database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword, database="hospital_main")
+c = database.cursor(buffered=True)
+
+
+
+message_types = ['success', 'error', 'ask', 'fatalerror', 
+                 'preheader', 'info', 'debug']
+
+init(autoreset=True)
+
+months = {1: 'Jan', 2: 'Feb', 3:'Mar', 4:'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10:'Oct', 11:'Nov', 12:'Dec'}
+
+
+
+def friendlyYear(yeariso: str, convertMD: bool = False) -> str:
+    split = str(yeariso).split('-')
+    year, month, day = split[0], split[1], split[2]
+    if convertMD:
+        return f"{day} {months[int(month)]} {year}"
+    return f"{day}/{month}/{year}"
+
+
 
 def print_header(header_text: str = "Table"):
     print(colored(f"{'*'*10} {header_text.upper()} {'*'*10}", 'yellow', attrs=['bold', 'reverse']))
@@ -93,14 +131,7 @@ def convertTime(rawTime):
     # Return formatted time
     return f"{hour}:{minutes} {period}"
 
-def colorify(message, type='info', end=False):
-    style = MESSAGE_STYLES.get(type, {'symbol': '❔', 'color': 'white'})
-    symbol = style['symbol']
-    color = style['color']
-    if end == False:
-        slow_print(f"[{symbol}]\t{message}", color, end=False)
-    else:
-        slow_print(f"[{symbol}]\t{message}", color, end=True)
+
 
 def fetchTableNameFromUserType(current_user_type):
     tablename = None
