@@ -688,8 +688,9 @@ def signup(user_type):
         (aExists, admin_record) = zampy.check_record_exists(admin_name, 1, ordered_admin_table)
         if aExists:
             colorify(f"Username already exists with admin data: {admin_record}!", 'error') #add column names - !!
-            confirm = input("Do you confirm this is your data? (Y/N): ")
-            if confirm in 'Yy':
+            colorify("Do you confirm this is your data?", 'ask')
+            confirm = int(input(zampy.make_menu_from_options()))
+            if confirm == 1:
                 password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[admin_record[0]], returnAllData=False)
                 #print('password:', password)
                 if password and checkIfNonNull(password) == True:
@@ -705,9 +706,10 @@ def signup(user_type):
                     if choice == 1:
                         colorify("Type a new ", 'ask',end=True)
                         newPassword = askForPassword()
-                        while newPassword != None:
+                        while newPassword == None:
                             newPassword = askForPassword()
                         c.execute(f'update credentials set password = "{newPassword}" where userid = "{admin_record[0]}"')
+                        database.commit()
                     else:
                         start_program()
             else:
