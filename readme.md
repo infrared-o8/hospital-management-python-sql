@@ -3,8 +3,23 @@ This project was made for the CBSE computer science practicals 2024-25, using SQ
 
 ## Quick Configuration
 
-Run the `init.bat` file to install all dependencies and set up the sample `hospital_main` database used in this project.
+Run the `init.bat` file to install all dependencies and set up the sample `hospital_main` database used in this project. I personally prefer logging in as an admin first, to view all the tables in the database. 
 
+Some login credentials for testing purposes:
+1. Patient: 
+   PatientID: P1
+   PatientName: andrew
+   Password: adgro
+
+2. Doctor:
+   DoctorID: D1
+   DoctorName: doc1
+   Password: hxbzj
+
+3. Admin:
+   AdminID: ADM1
+   AdminName: Zeeman
+   Password: adminboi
 ---
 
 ## Adding MySQL to PATH Variables
