@@ -10,7 +10,7 @@ import zampy
 def vanilla_sql_login():
     userinp = input('Enter SQL username: ')
     userpassword = input("Enter SQL password: ")
-    colorify('Store SQL credentials?')
+    print('Store SQL credentials?')
     storeInFile = int(input(zampy.make_menu_from_options()))
 
     if storeInFile == 1:
