@@ -7,18 +7,18 @@ Run the `init.bat` file to install all dependencies and set up the sample `hospi
 
 Some login credentials for testing purposes:
 1. Patient: 
-   PatientID: P1
-   PatientName: andrew
+   PatientID: P1,
+   PatientName: andrew,
    Password: adgro
 
 2. Doctor:
-   DoctorID: D1
-   DoctorName: doc1
+   DoctorID: D1,
+   DoctorName: doc1,
    Password: hxbzj
 
 3. Admin:
-   AdminID: ADM1
-   AdminName: Zeeman
+   AdminID: ADM1,
+   AdminName: Zeeman,
    Password: adminboi
 ---
 
