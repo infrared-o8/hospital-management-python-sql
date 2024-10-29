@@ -4,7 +4,6 @@ import pickle
 from pathlib import Path #sql_file destination
 import sys
 import os
-import time
 import zampy
 
 def vanilla_sql_login():
@@ -36,20 +35,27 @@ else:
 database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword)
 c = database.cursor()
 
-def execute_sql_file(userinp, userpassword):
+def execute_sql_file(filename,cursor):
 
-    try:
-        database.database='hospital_main'
-    except:
-        c.execute("CREATE DATABASE hospital_main")
+    cursor.execute("CREATE DATABASE hospital_main")
+    database.database='hospital_main'
+    cursor.execute("USE hospital_main")    # Switch to the new database
 
-        mysql_executable = r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
-        command = [mysql_executable, "-u", userinp, "-p" + userpassword, 'hospital_main']
-
-        with open(r'hospital_main.sql', 'r') as sql_file:
-            subprocess.run(command, stdin=sql_file)
-
-        database.database='hospital_main'
+    with open(filename, 'r') as sql_file:
+        sql_commands = sql_file.read()
+        # Split commands by the semicolon
+        sql_commands_list = sql_commands.split(';')
+        
+        for command in sql_commands_list:
+            # Strip and check if the command is not empty
+            if command.strip():
+                try:
+                    cursor.execute(command)
+                except mysql.connector.Error as err:
+                    print(f"Error: {err}")
+                    return False
+            
+    return True
 
 flag_file = '.first_run'
 
@@ -59,4 +65,16 @@ if not os.path.exists(flag_file):
     with open(flag_file, 'w') as f:
         f.write("This file marks the first run completion.")
 
-execute_sql_file(userinp,userpassword)
+try:
+    database.database='hospital_main'
+except:
+    temp=execute_sql_file('hospital_main.sql',c)
+    if temp:
+        print("Successfuly installed database.")
+    else:
+        print("Database installation unsuccessful.")
+        
+if 'c' in locals():
+    c.close()
+if 'database' in locals():
+    database.close()
