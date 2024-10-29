@@ -1,5 +1,5 @@
 ## Brief Summary
-This project was made for the CBSE computer science practicals and made with SQL and Python. This project intends to allow quicker and easier handling of data relevant to the hospital environment, such as doctors' data, patients' data, and medication data. It also attempts to implement an appointment-scheduling system. 
+This project was made for the CBSE computer science practicals 2024-25, using SQL and Python. This project intends to allow quicker and easier handling of data relevant to the hospital environment, such as doctors' data, patients' data, and medication data. It also attempts to implement an appointment-scheduling system. 
 
 ## Quick Configuration
 
