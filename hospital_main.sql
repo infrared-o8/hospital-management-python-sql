@@ -61,7 +61,7 @@ CREATE TABLE `admins` (
 
 LOCK TABLES `admins` WRITE;
 /*!40000 ALTER TABLE `admins` DISABLE KEYS */;
-INSERT INTO `admins` VALUES ('ADM1','Zeeman','zeeman@hotmail.com'),('ADM2','abc',NULL),('ADM3','test3','helpdesk@xyz.com'),('ADM4','astro','boo@businessmail.com'),('ADM5','xyz',NULL);
+INSERT INTO `admins` VALUES ('ADM1','Zeeman','zeeman@hotmail.com');
 /*!40000 ALTER TABLE `admins` ENABLE KEYS */;
 UNLOCK TABLES;
 

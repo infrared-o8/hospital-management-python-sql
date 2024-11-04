@@ -72,7 +72,13 @@ except:
     if temp:
         print("Successfuly installed database.")
     else:
-        print("Database installation unsuccessful.")
+        print("Database installation unsuccessful. Attempting to install from compatible file...")
+        temp=execute_sql_file('hospital_main_compatible.sql',c)
+        if temp:
+            print("Successfuly installed database.")
+        else:
+            print("Database installation from hospital_main_compatible.sql unsuccessful.")
+
         
 if 'c' in locals():
     c.close()
