@@ -1,7 +1,6 @@
 import mysql.connector #sql
 from datetime import datetime, date #utilities
 import zampy
-from prettytable import PrettyTable, from_db_cursor, FRAME, ALL,colortable #utilities
 from prettytable.colortable import ColorTable
 import pickle #utilities
 import bcrypt #password
@@ -19,7 +18,6 @@ current_user_type = None
 current_user_data = None
 
 request_sign_up = "Request to Sign Up"
-request_promotion = 'Request to Promote'
 # Define the path to the local directory
 directory = Path.home() / "HospitalManagement-PythonSQL"  # This creates a folder in the user's home directory
 
@@ -40,7 +38,7 @@ MESSAGE_STYLES = {
     'debug': {'symbol': '🐞', 'color': 'magenta'}
 }
 
-def slow_print(message, color, delay=0.015, end=False):
+def slow_print(message, color, delay=0.01785, end=False):
     for char in message:
         #sys.stdout.write(char)
         #sys.stdout.flush()
@@ -280,7 +278,6 @@ def incrementNumericPart(text):
 
 def getHighestID(ordered_table):
     highestNum = 0
-    #highestID = None
     for record in ordered_table:
         currentNum = (record[0][1:])
         x = 0
@@ -506,6 +503,9 @@ def vanilla_login():
 def start_program():
     global current_user_type
     global current_user_data
+
+
+
     try:
         bfile = open(login_file, "rb")
         bfilecontents = pickle.load(bfile)
