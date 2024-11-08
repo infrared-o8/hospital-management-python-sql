@@ -13,7 +13,7 @@ if %ERRORLEVEL% equ 0 (
     pause
     exit /b
 )
-
+cls
 echo Running main.py
 python project_files\main.py
 pause

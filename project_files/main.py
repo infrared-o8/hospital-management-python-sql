@@ -164,6 +164,9 @@ except mysql.connector.errors.ProgrammingError:
   PRIMARY KEY (`prescriptionID`)
 )""")
     
+    c.execute('INSERT INTO admins values ("ADM1", "admin1", "admin1@xyz.com")')
+    c.execute('INSERT INTO credentials values ("ADM1", "admin")')
+    
 database.database = 'hospital_main'
 
 message_types = ['success', 'error', 'ask', 'fatalerror', 
@@ -281,11 +284,16 @@ def makePrettyTable(tableName, data, makeHeader: bool = True):
             colorify(f'data in makePrettyTable: {data}', 'debug')
         
         #check if data is a single row (tuple or list) or multiple rows (list of tuples/lists)
-        if isinstance(data[0], (tuple, list)):  # Multiple rows case (list of lists/tuples)
-            table.add_rows([x for x in data])
-        else:  #single row case (tuple or list)
-            table.add_row([x for x in data])
-
+        try:
+            if isinstance(data[0], (tuple, list)):  # Multiple rows case (list of lists/tuples)
+                table.add_rows([x for x in data])
+            else:  #single row case (tuple or list)
+                table.add_row([x for x in data])
+        except Exception as e:
+            colorify('Error while trying to display table.', 'error')
+            if debug:
+                colorify(f'Error while displaying table: {e}', 'error')
+            log(f'Error while displaying table: {e}')
         # raw display the table
         print(table)
     
