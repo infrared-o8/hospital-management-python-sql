@@ -7,7 +7,7 @@ Run the `init.bat` file to install all dependencies and run main.py. I personall
 
 No doctor/patient accounts will be imported with the setting up of the database, so you will have to create a new Doctor or Patient account. As for admin:
 
-AdminID: ADM1
+AdminID: ADM1 | 
 Password: admin
 
 ---
