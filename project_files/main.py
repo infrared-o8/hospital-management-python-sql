@@ -1,6 +1,6 @@
 import mysql.connector #sql
 from datetime import datetime, date #utilities
-import zampy
+import project_files.zampy as zampy
 from prettytable.colortable import ColorTable
 import pickle #utilities
 import bcrypt #password
@@ -83,10 +83,88 @@ else:
     userinp, userpassword = data[0], data[1]
 
 
-database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword, database="hospital_main")
+database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword)
+if database.is_connected():
+    colorify('Succesfully established connection to SQL.', 'success')
+
 c = database.cursor(buffered=True)
+try:
+    c.execute('use hospital_main;')
+except mysql.connector.errors.ProgrammingError:
+    #database doesnt exist. create one
+    c.execute('CREATE database hospital_main;')
+    c.execute('USE hospital_main;')
 
+    #creating all tables.
+    c.execute("""CREATE TABLE `admin_requests` (
+    `requestID` varchar(10) NOT NULL,
+    `requestReason` varchar(50) DEFAULT NULL,
+    `signUpRequestName` varchar(30) DEFAULT NULL,
+    PRIMARY KEY (`requestID`)
+    )""")
 
+    c.execute("""CREATE TABLE `admins` (
+  `adminID` varchar(10) NOT NULL,
+  `adminName` varchar(50) DEFAULT NULL,
+  `emailID` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`adminID`)
+)""")
+
+    c.execute("""CREATE TABLE `appointments` (
+  `appointmentID` varchar(15) NOT NULL,
+  `patientID` varchar(15) DEFAULT NULL,
+  `doctorID` varchar(15) DEFAULT NULL,
+  `appointmentDate` date DEFAULT NULL,
+  `appointmentReason` varchar(150) DEFAULT NULL,
+  `status` varchar(30) DEFAULT NULL,
+  `appointmentTime` varchar(9) DEFAULT NULL,
+  PRIMARY KEY (`appointmentID`)
+)""")
+    
+    c.execute("""CREATE TABLE `credentials` (
+  `userid` varchar(30) NOT NULL,
+  `password` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`userid`)
+)""")
+    
+    c.execute("""CREATE TABLE `doctors` (
+  `DoctorID` varchar(10) NOT NULL,
+  `Name` varchar(50) DEFAULT NULL,
+  `Specialization` varchar(30) DEFAULT NULL,
+  `Phone` int DEFAULT NULL,
+  `ConsultationFee` int DEFAULT NULL,
+  PRIMARY KEY (`DoctorID`)
+)""")
+    
+    c.execute("""CREATE TABLE `medicalhistory` (
+  `recordID` varchar(30) NOT NULL,
+  `patientID` varchar(30) DEFAULT NULL,
+  `doctorID` varchar(30) DEFAULT NULL,
+  `visitDate` date DEFAULT NULL,
+  `diagnosis` varchar(300) DEFAULT NULL,
+  `prescriptionID` varchar(20) DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `time` varchar(9) DEFAULT NULL,
+  PRIMARY KEY (`recordID`)
+)""")
+    
+    c.execute("""CREATE TABLE `patients` (
+  `PatientID` varchar(10) NOT NULL,
+  `Name` varchar(50) DEFAULT NULL,
+  `Gender` char(1) DEFAULT NULL,
+  `DOB` date DEFAULT NULL,
+  `Phone` int DEFAULT NULL,
+  PRIMARY KEY (`PatientID`)
+)""")
+    
+    c.execute("""CREATE TABLE `prescriptions` (
+  `prescriptionID` varchar(20) NOT NULL,
+  `medication_name` varchar(30) DEFAULT NULL,
+  `dosage` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`prescriptionID`)
+)""")
+    
+database.database = 'hospital_main'
 
 message_types = ['success', 'error', 'ask', 'fatalerror', 
                  'preheader', 'info', 'debug']
@@ -152,7 +230,7 @@ def checkIfNonNull(variable):
         return True
 
 def returnNewID(tableName):
-    return incrementNumericPart(getHighestID(retreiveData(tableName)))
+    return incrementNumericPart(getHighestID(retreiveData(tableName), tableName))
 
 def fetchAccountInfo(requiredID, current_user_type):
     with Halo(text='Retrieving data...', spinner=spinnerType):
@@ -173,6 +251,10 @@ def fetchColumns(tableName):
         return columnNames
     else:
         return None
+
+def returnOrderedTableFromTableName(tableName: str):
+    c.execute(f"select * from {tableName} ORDER BY {tableName[:len(tableName)-1]+'ID'}")
+    return c.fetchall()
 
 def makePrettyTable(tableName, data, makeHeader: bool = True):
     # fetch column names for the table
@@ -276,18 +358,21 @@ def incrementNumericPart(text):
     number = int(number) + 1
     return text[0:1+x] + str(number)
 
-def getHighestID(ordered_table):
+def getHighestID(ordered_table, table_name):
     highestNum = 0
-    for record in ordered_table:
-        currentNum = (record[0][1:])
-        x = 0
-        while not currentNum.isnumeric():
-            x += 1
-            currentNum = (record[0][(1 + x):])
-        currentNum = int(currentNum)
-        if currentNum > highestNum:
-            highestNum = currentNum
-    return ordered_table[0][0][0:(1+x)] + str(highestNum)  
+    if checkIfNonNull(ordered_table) == True:
+        for record in ordered_table:
+            currentNum = (record[0][1:])
+            x = 0
+            while not currentNum.isnumeric():
+                x += 1
+                currentNum = (record[0][(1 + x):])
+            currentNum = int(currentNum)
+            if currentNum > highestNum:
+                highestNum = currentNum
+        return ordered_table[0][0][0:(1+x)] + str(highestNum)
+    else:
+        return table_name[0].upper() + "1"
 
 def makeNewPrescription(returnPCID = True):
     prescription = input("Enter prescription name: ")
@@ -562,17 +647,13 @@ def make_new_record(ordered_table, name, usertype):
         global current_user_data
         global current_user_type
         if usertype == "P":
-            #new_patient_id = f"{usertype}{int(ordered_table[-1][0][1]) + 1}" #update thisss
             data = retreiveData('patients')
             new_patient_id = None
             if zampy.checkEmpty(data):
                 new_patient_id = "P1"
             else:
                 new_patient_id = f"{returnNewID('patients')}"
-            #new_patient_id = f"{incrementNumericPart(getHighestID(ordered_table))}" 
             new_patient_data = [new_patient_id, name]
-            #print(new_patient_id)
-            #c.execute("INSERT into patients (PatientID, Name) values (%s, %s)", new_patient_data)
             colorify("Type a new ", 'ask',end=True)
             new_p = getpass.getpass()
             new_p_bytes = new_p.encode('utf-8')
@@ -591,7 +672,7 @@ def make_new_record(ordered_table, name, usertype):
                 bfile = open(login_file, "wb")
                 pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
         elif usertype == "D":
-            new_doctor_id = f"{incrementNumericPart(getHighestID(ordered_table))}"
+            new_doctor_id = f"{incrementNumericPart(getHighestID(ordered_table, 'doctors'))}"
             new_doctor_data = [new_doctor_id, name]
 
             #c.execute("INSERT into doctors (doctorID, Name) values (%s, %s)", new_doctor_data)

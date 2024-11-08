@@ -14,16 +14,7 @@ if %ERRORLEVEL% equ 0 (
     exit /b
 )
 
-echo Running install_database.py...
-python install_database.py
-
-if %ERRORLEVEL% equ 0 (
-    echo Database successfully installed!
-) else (
-    echo There was an error installing the database.
-    pause
-    exit /b
-)
-
+echo Running main.py
+python main.py
 pause
 exit /b
