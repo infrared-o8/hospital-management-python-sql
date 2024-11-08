@@ -1,6 +1,6 @@
 import mysql.connector #sql
 from datetime import datetime, date #utilities
-import project_files.zampy as zampy
+import zampy
 from prettytable.colortable import ColorTable
 import pickle #utilities
 import bcrypt #password

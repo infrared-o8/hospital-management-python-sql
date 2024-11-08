@@ -15,6 +15,6 @@ if %ERRORLEVEL% equ 0 (
 )
 
 echo Running main.py
-python main.py
+python project_files\main.py
 pause
 exit /b
