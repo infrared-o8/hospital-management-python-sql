@@ -1121,10 +1121,14 @@ while True:
     print('\n\n')
     updateAppointments(current_user_type)
 
-    current_user_data = fetchAccountInfo(current_user_data[0], current_user_type) #update account info if info was edited.
-    colorify(f'Account:', 'info')
-    makePrettyTable(fetchTableNameFromUserType(current_user_type)[0], current_user_data, makeHeader=False)
-
+    try:
+        current_user_data = fetchAccountInfo(current_user_data[0], current_user_type) #update account info if info was edited.
+        colorify(f'Account:', 'info')
+        makePrettyTable(fetchTableNameFromUserType(current_user_type)[0], current_user_data, makeHeader=False)
+    except Exception as e:
+        colorify('Fatal error while trying to access account...', 'fatalerror')
+        log('Fatal error while trying to access account... {}'.format(e))
+        break
     log(f"Account used: {current_user_type}")
 
 
