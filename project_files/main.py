@@ -82,90 +82,90 @@ else:
     data = pickle.load(file)
     userinp, userpassword = data[0], data[1]
 
-
 database = mysql.connector.connect(host="localhost", user = userinp, password=userpassword)
 if database.is_connected():
     colorify('Succesfully established connection to SQL.', 'success')
 
 c = database.cursor(buffered=True)
-try:
-    c.execute('use hospital_main;')
-except mysql.connector.errors.ProgrammingError:
-    #database doesnt exist. create one
-    c.execute('CREATE database hospital_main;')
-    c.execute('USE hospital_main;')
+with Halo(text='Attempting to use hospital_main...', spinner=spinnerType):
+    try:
+        c.execute('use hospital_main;')
+    except mysql.connector.errors.ProgrammingError:
+        #database doesnt exist. create one
+        c.execute('CREATE database hospital_main;')
+        c.execute('USE hospital_main;')
 
-    #creating all tables.
-    c.execute("""CREATE TABLE `admin_requests` (
-    `requestID` varchar(10) NOT NULL,
-    `requestReason` varchar(50) DEFAULT NULL,
-    `signUpRequestName` varchar(30) DEFAULT NULL,
-    PRIMARY KEY (`requestID`)
+        #creating all tables.
+        c.execute("""CREATE TABLE `admin_requests` (
+        `requestID` varchar(10) NOT NULL,
+        `requestReason` varchar(50) DEFAULT NULL,
+        `signUpRequestName` varchar(30) DEFAULT NULL,
+        PRIMARY KEY (`requestID`)
+        )""")
+
+        c.execute("""CREATE TABLE `admins` (
+    `adminID` varchar(10) NOT NULL,
+    `adminName` varchar(50) DEFAULT NULL,
+    `emailID` varchar(45) DEFAULT NULL,
+    PRIMARY KEY (`adminID`)
     )""")
 
-    c.execute("""CREATE TABLE `admins` (
-  `adminID` varchar(10) NOT NULL,
-  `adminName` varchar(50) DEFAULT NULL,
-  `emailID` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`adminID`)
-)""")
-
-    c.execute("""CREATE TABLE `appointments` (
-  `appointmentID` varchar(15) NOT NULL,
-  `patientID` varchar(15) DEFAULT NULL,
-  `doctorID` varchar(15) DEFAULT NULL,
-  `appointmentDate` date DEFAULT NULL,
-  `appointmentReason` varchar(150) DEFAULT NULL,
-  `status` varchar(30) DEFAULT NULL,
-  `appointmentTime` varchar(9) DEFAULT NULL,
-  PRIMARY KEY (`appointmentID`)
-)""")
-    
-    c.execute("""CREATE TABLE `credentials` (
-  `userid` varchar(30) NOT NULL,
-  `password` varchar(50) DEFAULT NULL,
-  PRIMARY KEY (`userid`)
-)""")
-    
-    c.execute("""CREATE TABLE `doctors` (
-  `DoctorID` varchar(10) NOT NULL,
-  `Name` varchar(50) DEFAULT NULL,
-  `Specialization` varchar(30) DEFAULT NULL,
-  `Phone` int DEFAULT NULL,
-  `ConsultationFee` int DEFAULT NULL,
-  PRIMARY KEY (`DoctorID`)
-)""")
-    
-    c.execute("""CREATE TABLE `medicalhistory` (
-  `recordID` varchar(30) NOT NULL,
-  `patientID` varchar(30) DEFAULT NULL,
-  `doctorID` varchar(30) DEFAULT NULL,
-  `visitDate` date DEFAULT NULL,
-  `diagnosis` varchar(300) DEFAULT NULL,
-  `prescriptionID` varchar(20) DEFAULT NULL,
-  `status` varchar(20) DEFAULT NULL,
-  `time` varchar(9) DEFAULT NULL,
-  PRIMARY KEY (`recordID`)
-)""")
-    
-    c.execute("""CREATE TABLE `patients` (
-  `PatientID` varchar(10) NOT NULL,
-  `Name` varchar(50) DEFAULT NULL,
-  `Gender` char(1) DEFAULT NULL,
-  `DOB` date DEFAULT NULL,
-  `Phone` int DEFAULT NULL,
-  PRIMARY KEY (`PatientID`)
-)""")
-    
-    c.execute("""CREATE TABLE `prescriptions` (
-  `prescriptionID` varchar(20) NOT NULL,
-  `medication_name` varchar(30) DEFAULT NULL,
-  `dosage` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`prescriptionID`)
-)""")
-    
-    c.execute('INSERT INTO admins values ("ADM1", "admin1", "admin1@xyz.com")')
-    c.execute('INSERT INTO credentials values ("ADM1", "admin")')
+        c.execute("""CREATE TABLE `appointments` (
+    `appointmentID` varchar(15) NOT NULL,
+    `patientID` varchar(15) DEFAULT NULL,
+    `doctorID` varchar(15) DEFAULT NULL,
+    `appointmentDate` date DEFAULT NULL,
+    `appointmentReason` varchar(150) DEFAULT NULL,
+    `status` varchar(30) DEFAULT NULL,
+    `appointmentTime` varchar(9) DEFAULT NULL,
+    PRIMARY KEY (`appointmentID`)
+    )""")
+        
+        c.execute("""CREATE TABLE `credentials` (
+    `userid` varchar(30) NOT NULL,
+    `password` varchar(50) DEFAULT NULL,
+    PRIMARY KEY (`userid`)
+    )""")
+        
+        c.execute("""CREATE TABLE `doctors` (
+    `DoctorID` varchar(10) NOT NULL,
+    `Name` varchar(50) DEFAULT NULL,
+    `Specialization` varchar(30) DEFAULT NULL,
+    `Phone` int DEFAULT NULL,
+    `ConsultationFee` int DEFAULT NULL,
+    PRIMARY KEY (`DoctorID`)
+    )""")
+        
+        c.execute("""CREATE TABLE `medicalhistory` (
+    `recordID` varchar(30) NOT NULL,
+    `patientID` varchar(30) DEFAULT NULL,
+    `doctorID` varchar(30) DEFAULT NULL,
+    `visitDate` date DEFAULT NULL,
+    `diagnosis` varchar(300) DEFAULT NULL,
+    `prescriptionID` varchar(20) DEFAULT NULL,
+    `status` varchar(20) DEFAULT NULL,
+    `time` varchar(9) DEFAULT NULL,
+    PRIMARY KEY (`recordID`)
+    )""")
+        
+        c.execute("""CREATE TABLE `patients` (
+    `PatientID` varchar(10) NOT NULL,
+    `Name` varchar(50) DEFAULT NULL,
+    `Gender` char(1) DEFAULT NULL,
+    `DOB` date DEFAULT NULL,
+    `Phone` int DEFAULT NULL,
+    PRIMARY KEY (`PatientID`)
+    )""")
+        
+        c.execute("""CREATE TABLE `prescriptions` (
+    `prescriptionID` varchar(20) NOT NULL,
+    `medication_name` varchar(30) DEFAULT NULL,
+    `dosage` varchar(100) DEFAULT NULL,
+    PRIMARY KEY (`prescriptionID`)
+    )""")
+        
+        c.execute('INSERT INTO admins values ("ADM1", "admin1", "admin1@xyz.com")')
+        c.execute('INSERT INTO credentials values ("ADM1", "admin")')
     
 database.database = 'hospital_main'
 
@@ -1271,7 +1271,7 @@ while True:
                     except Exception as e:
                         colorify("Couldn't make table from given data.", 'error')
                         log(f'Error while prettyTable: {e}')
-                        print(data)
+                        #print(data)
                 except Exception as e:
                     colorify(f"Error while running command: {e}", 'error')
                     log(f"Error while running command: {e}")
