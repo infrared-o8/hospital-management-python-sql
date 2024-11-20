@@ -1231,7 +1231,7 @@ while True:
                 index = int(input(zampy.make_menu_from_options(options)))
                 if index == 1:
                     with Halo(text='Retrieving data...', spinner=spinnerType):
-                        c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s AND appointmentDate <= %s", (current_user_data[0], 'Scheduled', str(date.today().isoformat())))
+                        c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s AND appointmentDate >= %s", (current_user_data[0], 'Scheduled', str(date.today().isoformat())))
                         data = c.fetchall()
                     #print(data) 
                     makePrettyTable('appointments', data)
