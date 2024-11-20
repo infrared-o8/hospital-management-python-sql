@@ -51,6 +51,8 @@ def colorify(message, type='info', end=False):
     style = MESSAGE_STYLES.get(type, {'symbol': '❔', 'color': 'white'})
     symbol = style['symbol']
     color = style['color']
+    if 'success' in message.lower() or 'succes' in message.lower():
+        type = 'success'
     if end == False:
         slow_print(f"[{symbol}]\t{message}", color, end=False)
     else:
@@ -596,9 +598,6 @@ def vanilla_login():
 def start_program():
     global current_user_type
     global current_user_data
-
-
-
     try:
         bfile = open(login_file, "rb")
         bfilecontents = pickle.load(bfile)
@@ -876,13 +875,17 @@ def login(user_type):
                 signup(user_type)
         else:
             cpassword = retreiveData('credentials', False, ['password'], ['userid'], [record[0]], returnAllData=False)
-            #cpasswordbytes = cpassword.encode('utf-8')
-            #print(cpassword)
             if checkIfNonNull(cpassword) == True:
                 cpassword = cpassword[0]
                 if checkPasswords(cpassword, record[1]):
+                    cpasswordbytes = cpassword.encode('utf-8')
                     current_user_data = record
                     colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
+                    colorify('One time login?', 'ask')
+                    onetimelogin = int(input(zampy.make_menu_from_options()))
+                    if onetimelogin == 2:
+                        bfile = open(login_file, "wb")
+                        pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
                     #bfile = open(login_file, "wb")
                     #pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
                 else:
@@ -993,11 +996,6 @@ def retreiveData(tableName: str, allColumns:bool = False, columnNames: list = No
     try:
         with Halo(text='Retrieving data...', spinner=spinnerType):
             c.execute(command)
-        '''        no_of_rows = len(c.fetchall())
-        progress_bar = tqdm(total=no_of_rows, desc="Fetching data", ncols=100)
-        for index in range(no_of_rows):
-            time.sleep(.25)
-            progress_bar.update(100/no_of_rows)'''
     except Exception as e:
         colorify(f"Error while trying to retrieve data: {e}",'debug')
         log(f"Error while trying to retrieve data: {e}")
@@ -1085,6 +1083,8 @@ def resetMenuOptions(current_user_type):
                     'Access appointments panel', 
                     'View pending requests', 
                     'View table',
+                    'Modify patient database',
+                    'Modify doctor database',
                     'Execute custom SQL command',
                     'Edit your data',
                     'Log out',
@@ -1099,6 +1099,8 @@ def resetMenuOptions(current_user_type):
                'Access appointments panel' if current_user_type == "D" else None, 
                'View pending requests' if current_user_type == 'A' else None, 
                'View table' if current_user_type == 'A' else None,
+               'Modify patient database' if current_user_type == 'A' else None,
+               'Modify doctor database' if current_user_type == 'A' else None,
                'Execute custom SQL command' if current_user_type == 'A' else None,
                'Edit your data' if current_user_type != None else None,
                'Log out' if current_user_data != None else None,
@@ -1258,6 +1260,204 @@ while True:
                     colorify(f'Error while trying to access table {table_name}. Details in log.txt', 'error')
                     log(f'Error while trying to access table {table_name}: {e}')
             elif index == 9:
+                #Modify patient database
+                tablename = 'patients'
+                c.execute(f'SELECT column_name, data_type FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = "{tablename}";')
+                columntypestuples = c.fetchall()
+                dict_columntypes = dict()
+                
+                for column_tuple in columntypestuples:
+                    dict_columntypes[column_tuple[0].lower()] = column_tuple[1] #name = type
+                if debug:
+                    colorify(f'Modify {tablename[:len(tablename)-1]} database', 'debug')
+                data = retreiveData(tablename, allColumns=True)
+                if len(data) > 0 and checkIfNonNull(data) == True:
+                    options = [f'Add {tablename[:len(tablename)-1]}', f'Modify existing {tablename[:len(tablename)-1]}', f'Delete {tablename[:len(tablename)-1]}']
+                    choice = int(input(zampy.make_menu_from_options(options)))
+                    if choice == 1:
+                        #Add patient
+                        allColumns = fetchColumns(tablename)
+                        tempRecord = []
+                        for column in allColumns:
+                            if 'id' in column.lower():
+                                tempRecord.append(returnNewID(tablename))
+                                continue
+                            if column == 'DOB':
+                                data = zampy.choose_date()
+                            elif column == 'Phone':
+                                data = int(input('Enter phone number: '))
+                            else:
+                                data = input(f'Enter {column}: ')
+                            tempRecord.append(data)
+                        #Try adding to patient table
+                        try:
+                            add_value_to_table(tablename, allColumns, tempRecord)
+                        except Exception as e:
+                            colorify(f'Error while trying to edit data: {e}', 'error')
+                            log(f'Error while trying to edit data for {current_user_data}: {e}')
+                        else:
+                            colorify(f'Succefully created new {tablename[:len(tablename)-1]} record.', 'success')
+                    elif choice == 2:
+                        #Modify existing patient
+                        reqID = (input(f'Enter {tablename[:len(tablename)-1]} ID:'))
+                        c.execute(f'select * from {tablename} where {tablename[:len(tablename)-1]}ID = "{reqID}";')
+                        data = c.fetchone()
+                        if len(data) > 0 and checkIfNonNull(data) == True:
+                            allColumns = fetchColumns(tablename)
+                            for columnName in allColumns:
+                                if 'id' in columnName.lower():
+                                    continue
+                                datatypehere = dict_columntypes[columnName.lower()]
+                                if 'date' in datatypehere:
+                                    colorify(f'Edit {columnName}?', 'ask')
+                                else:
+                                    colorify(f'Edit {columnName}?', 'ask')
+                                confirmEdit = int(input(zampy.make_menu_from_options()))
+                                if confirmEdit == 1:
+                                    if 'date' in (datatypehere):
+                                        if debug:
+                                            colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                        input_data = zampy.choose_date()
+                                    elif 'int' in (datatypehere):
+                                        if debug:
+                                            colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                        try:
+                                            input_data = int(input("Enter new data: "))
+                                        except ValueError:
+                                            colorify('Enter data of correct type.', 'error')
+                                        except Exception as e:
+                                            colorify(f'Some error occured: {e}', 'error')
+                                    else:
+                                        if debug:
+                                            colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                        input_data = input('Enter new data: ')
+                                    try:
+                                        c.execute(f'update {tablename} set {columnName} = "{input_data}" where {tablename[:len(tablename)-1]}ID = "{reqID}"')
+                                        database.commit()
+                                    except Exception as e:
+                                        colorify(f'Error while trying to edit data: {e}', 'error')
+                                        log(f'Error while trying to edit data for {current_user_data}: {e}')
+                                    else:
+                                        colorify(f'Succesfully updated {columnName}.', 'success')
+                            colorify(f'Succesfully updated {tablename[:len(tablename)-1]}.', 'success')
+                        else:
+                            colorify(f'Requested {tablename[:len(tablename)-1]} ID doesn\'t exist.', 'error')
+
+                    elif choice == 3:
+                        #Delete patient
+                        reqID = (input(f'Enter {tablename[:len(tablename)-1]} ID:'))
+                        c.execute(f'select * from {tablename} where {tablename[:len(tablename)-1]}ID = "{reqID}";')
+                        data = c.fetchone()
+                        try:
+                            if len(data) > 0 and checkIfNonNull(data) == True:
+                                c.execute(f'delete from {tablename} where {tablename[:len(tablename)-1]}ID="{reqID}"')
+                                database.commit()
+                        except Exception as e:
+                            colorify(f'Error while trying to delete data: {e}', 'error')
+                            log(f'Error while trying to delete data for {reqID}: {e}')
+                        else:
+                            colorify(f'Succesfully deleted {tablename[:len(tablename)-1]} from {tablename}.', 'success')
+            
+            elif index == 10:
+                #Modify doctor database
+                if debug:
+                    colorify('Modify doctor database', 'debug')
+                tablename = 'doctors'
+                c.execute(f'SELECT column_name, data_type FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = "{tablename}";')
+                columntypestuples = c.fetchall()
+                dict_columntypes = dict()
+                
+                for column_tuple in columntypestuples:
+                    dict_columntypes[column_tuple[0].lower()] = column_tuple[1] #name = type
+
+                data = retreiveData(tablename, allColumns=True)
+                if len(data) > 0 and checkIfNonNull(data) == True:
+                    options = [f'Add {tablename[:len(tablename)-1]}', f'Modify existing {tablename[:len(tablename)-1]}', f'Delete {tablename[:len(tablename)-1]}']
+                    choice = int(input(zampy.make_menu_from_options(options)))
+                    if choice == 1:
+                        #Add patient
+                        allColumns = fetchColumns(tablename)
+                        tempRecord = []
+                        for column in allColumns:
+                            if 'id' in column.lower():
+                                tempRecord.append(returnNewID(tablename))
+                                continue
+                            if column == 'DOB':
+                                data = zampy.choose_date()
+                            elif column == 'Phone':
+                                data = int(input('Enter phone number: '))
+                            else:
+                                data = input(f'Enter {column}: ')
+                            tempRecord.append(data)
+                        #Try adding to patient table
+                        try:
+                            add_value_to_table(tablename, allColumns, tempRecord)
+                        except Exception as e:
+                            colorify(f'Error while trying to edit data: {e}', 'error')
+                            log(f'Error while trying to edit data for {current_user_data}: {e}')
+                        else:
+                            colorify(f'Succefully created new {tablename[:len(tablename)-1]} record.', 'success')
+                    elif choice == 2:
+                        #Modify existing patient
+                        reqID = (input(f'Enter {tablename[:len(tablename)-1]} ID:'))
+                        c.execute(f'select * from {tablename} where {tablename[:len(tablename)-1]}ID = "{reqID}";')
+                        data = c.fetchone()
+                        if len(data) > 0 and checkIfNonNull(data) == True:
+                            allColumns = fetchColumns(tablename)
+                            for columnName in allColumns:
+                                if 'id' in columnName.lower():
+                                    continue
+                                datatypehere = dict_columntypes[columnName.lower()]
+                                if 'date' in datatypehere:
+                                    colorify(f'Edit {columnName}?', 'ask')
+                                else:
+                                    colorify(f'Edit {columnName}?', 'ask')
+                                confirmEdit = int(input(zampy.make_menu_from_options()))
+                                if confirmEdit == 1:
+                                    if 'date' in (datatypehere):
+                                        if debug:
+                                            colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                        input_data = zampy.choose_date()
+                                    elif 'int' in (datatypehere):
+                                        if debug:
+                                            colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                        try:
+                                            input_data = int(input("Enter new data: "))
+                                        except ValueError:
+                                            colorify('Enter data of correct type.', 'error')
+                                        except Exception as e:
+                                            colorify(f'Some error occured: {e}', 'error')
+                                    else:
+                                        if debug:
+                                            colorify(f'{columnName} is of type {datatypehere}', 'debug')
+                                        input_data = input('Enter new data: ')
+                                    try:
+                                        c.execute(f'update {tablename} set {columnName} = "{input_data}" where {tablename[:len(tablename)-1]}ID = "{reqID}"')
+                                        database.commit()
+                                    except Exception as e:
+                                        colorify(f'Error while trying to edit data: {e}', 'error')
+                                        log(f'Error while trying to edit data for {current_user_data}: {e}')
+                                    else:
+                                        colorify(f'Succesfully updated {columnName}.', 'success')
+                            colorify(f'Succesfully updated {tablename[:len(tablename)-1]}.', 'success')
+                        else:
+                            colorify(f'Requested {tablename[:len(tablename)-1]} ID doesn\'t exist.', 'error')
+
+                    elif choice == 3:
+                        #Delete patient
+                        reqID = (input(f'Enter {tablename[:len(tablename)-1]} ID:'))
+                        c.execute(f'select * from {tablename} where {tablename[:len(tablename)-1]}ID = "{reqID}";')
+                        data = c.fetchone()
+                        try:
+                            if len(data) > 0 and checkIfNonNull(data) == True:
+                                c.execute(f'delete from {tablename} where {tablename[:len(tablename)-1]}ID="{reqID}"')
+                                database.commit()
+                        except Exception as e:
+                            colorify(f'Error while trying to delete data: {e}', 'error')
+                            log(f'Error while trying to delete data for {reqID}: {e}')
+                        else:
+                            colorify(f'Succesfully deleted {tablename[:len(tablename)-1]} from {tablename}.', 'success')
+            elif index == 11:
                 #Execute custom SQL command
                 sql_command = input("Enter sql command:\n")
                 try:
@@ -1278,7 +1478,7 @@ while True:
                 else:
                     if debug:
                         colorify('No error in running command.', 'debug')
-            elif index == 10:
+            elif index == 12:
                 #Edit your data
                 tablename, id = fetchTableNameFromUserType(current_user_type)
                 c.execute(f'select * from {tablename} where {id} = "{current_user_data[0]}"')
@@ -1374,14 +1574,14 @@ while True:
                                 colorify(f'Succesfully updated {columnName}.', 'success')
                         else:
                             continue
-            elif index == 11:
+            elif index == 13:
                 #Log out
                 current_user_data = None
                 current_user_type = None
-            elif index == 12:
+            elif index == 14:
                 #Log in
                 start_program()
-            elif index == 13:
+            elif index == 15:
                 colorify("Thank you for using this program.", 'success')
                 exit()
             else:
