@@ -28,6 +28,10 @@ os.makedirs(directory, exist_ok=True)
 login_file = directory / "creds.dat"
 log_file = directory / 'log.txt'
 sql_creds = directory / 'sqlcreds.dat'
+
+spinnerType = 'dots'
+
+
 MESSAGE_STYLES = {
     'success': {'symbol': '✅', 'color': 'light_green'},
     'error': {'symbol': '❌', 'color': 'light_red'},
@@ -58,13 +62,24 @@ def colorify(message, type='info', end=False):
     else:
         slow_print(f"[{symbol}]\t{message}", color, end=True)
 
-spinnerType = 'dots'
+def cinput(prompt: str = 'Input: ', datatype = 'str'):
+    while True:
+        try:
+            if datatype == 'int':
+                data = int(input(prompt))
+            else:
+                data = input(prompt)
+            return data
+        except ValueError:
+            colorify(f'Please input data of correct data type. {datatype} was expected.', 'error')
+        except Exception as e:
+            colorify(f'Error while trying to read input: {e}', 'error')
 
 def vanilla_sql_login():
-    userinp = input('Enter SQL username: ')
-    userpassword = input("Enter SQL password: ")
+    userinp = cinput('Enter SQL username: ')
+    userpassword = cinput("Enter SQL password: ")
     colorify('Store SQL credentials?')
-    storeInFile = int(input(zampy.make_menu_from_options()))
+    storeInFile = cinput(zampy.make_menu_from_options(), 'int')
 
     if storeInFile == 1:
         file = open(sql_creds, 'wb')
@@ -318,7 +333,7 @@ def dealWithPendingRequests():
         name = req[2]
         id = returnNewID('admins')
         colorify(f"Approve pending sign-up of {name} as admin:", 'ask')
-        choice = int(input(zampy.make_menu_from_options()))
+        choice = cinput(zampy.make_menu_from_options(), 'int')
         if choice == 1:
             #delete from admin_requests
             c.execute(f'delete from admin_requests where requestID = "{req[0]}";')
@@ -385,7 +400,7 @@ def getHighestID(ordered_table, table_name):
         return table_name[0].upper() + "1"
 
 def makeNewPrescription(returnPCID = True):
-    prescription = input("Enter prescription name: ")
+    prescription = cinput("Enter prescription name: ")
     prescriptionID = None
     #check if it already exists
     with Halo(text='Retrieving data...', spinner=spinnerType):
@@ -407,7 +422,7 @@ def makeNewPrescription(returnPCID = True):
         else:
             prescriptionID = f"{returnNewID('prescriptions')}"
         #prescriptionID = returnNewID('prescriptions')
-        dosage = input("Enter general dosage: ")
+        dosage = cinput("Enter general dosage: ")
         add_value_to_table('prescriptions', ['prescriptionID', 'medication_name', 'dosage'], [prescriptionID, prescription, dosage])
         log(f'New prescription added with: {[prescriptionID, prescription, dosage]}')
     if returnPCID:
@@ -538,12 +553,12 @@ def updateAppointments(current_user_type):
                 patientID = appointment[1]
                 patientName = viewPatientDetails(patientID)[1]
                 colorify(f"Has the appointment scheduled with {patientName} been completed?", 'ask')
-                choice = int(input(zampy.make_menu_from_options()))
+                choice = cinput(zampy.make_menu_from_options(), 'int')
                 if choice == 1:
-                    diagnosis = input("Enter diagnosis: ")
-                    prescriptionID = input("Enter prescriptionID: ")
+                    diagnosis = cinput("Enter diagnosis: ")
+                    prescriptionID = cinput("Enter prescriptionID: ")
                     colorify(f"Is this the prescription: {viewPrescriptions(prescriptionID,False)}?", 'ask')
-                    confirm = int(input(zampy.make_menu_from_options()))
+                    confirm = cinput(zampy.make_menu_from_options(), 'int')
                     if confirm == 1:
                         #log into medical history
                         add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [returnNewID('medicalhistory'), patientID, doctorID, appointment[3], appointment[6], diagnosis, prescriptionID, 'Completed'])
@@ -562,7 +577,7 @@ def updateAppointments(current_user_type):
                     database.commit()
                 else:
                     colorify("Was the appointment cancelled?", 'ask')
-                    choice = int(input(zampy.make_menu_from_options()))
+                    choice = cinput(zampy.make_menu_from_options(), 'int')
                     if choice == 1:
                         #log into medical history, 
                         add_value_to_table('medicalhistory', ['recordID', 'patientID', 'doctorID', 'visitDate', 'time', 'diagnosis', 'prescriptionID', 'status'], [returnNewID('medicalhistory'), patientID, doctorID, appointment[3], appointment[6], 'NULL', 'NULL','Cancelled']) 
@@ -576,7 +591,7 @@ def vanilla_login():
     global current_user_type
     try:
         colorify("Using as:\n", 'ask')
-        user = int(input(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin'])))
+        user = cinput(zampy.make_menu_from_options(['Patient', 'Doctor', 'Admin']), 'int')
         if user == 1:
             #logging in as patient
             current_user_type = 'P'
@@ -632,7 +647,7 @@ def start_program():
             vanilla_login()
             return None
         colorify(f"Found an existing login file for {name}. Confirm login with these credentials?", 'ask')
-        confirmLogin = int(input(zampy.make_menu_from_options()))
+        confirmLogin = cinput(zampy.make_menu_from_options(), 'int')
         if confirmLogin == 1:
             #print("found)user_password", found_user_password)
             if checkPasswords(found_user_password, name, usebcrypt=True):
@@ -674,7 +689,7 @@ def make_new_record(ordered_table, name, usertype):
 
             current_user_data = retreiveData("patients", allColumns=True, conditionNames=['PatientID'], conditionValues=[new_patient_data[0]], returnAllData=False)
             colorify('One time login?', 'ask')
-            onetimelogin = int(input(zampy.make_menu_from_options()))
+            onetimelogin = cinput(zampy.make_menu_from_options(), 'int')
             if onetimelogin == 2:
                 bfile = open(login_file, "wb")
                 pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
@@ -702,7 +717,7 @@ def make_new_record(ordered_table, name, usertype):
             current_user_data = retreiveData("doctors", allColumns=True, conditionNames=['DoctorID'], conditionValues=[new_doctor_data[0]], returnAllData=False)
 
             colorify('One time login?', 'ask')
-            onetimelogin = int(input(zampy.make_menu_from_options()))
+            onetimelogin = cinput(zampy.make_menu_from_options(), 'int')
             if onetimelogin == 2:
                 bfile = open(login_file, "wb")
                 pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(new_p_bytes, bcrypt.gensalt())], bfile)
@@ -711,7 +726,7 @@ def signup(user_type):
     global current_user_data
     #get required info
     if user_type == "P":
-        patient_name = input("Enter patient name: ")
+        patient_name = cinput("Enter patient name: ")
         #check if it already exists in patients table.
         with Halo(text='Retrieving data...', spinner=spinnerType):
             c.execute('select * FROM patients ORDER BY PatientID') ##orderby functionality here!
@@ -722,7 +737,7 @@ def signup(user_type):
         (pExists, patient_record) = zampy.check_record_exists(patient_name, 1, ordered_patient_table)
         if pExists:
             colorify(f"Username already exists with patient data: {patient_record}!", 'error') #add column names - !!
-            confirm = input("Do you confirm this is your data? (Y/N): ") #add password protection here
+            confirm = cinput("Do you confirm this is your data? (Y/N): ") #add password protection here
             if confirm in 'Yy':
                 password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[patient_record[0]], returnAllData=False)
                 password = password[0]
@@ -733,7 +748,7 @@ def signup(user_type):
                     incorrectPassword()
             else:
                 colorify("Would you like to create a new account with this name?", 'ask')
-                choice = int(input(zampy.make_menu_from_options()))
+                choice = cinput(zampy.make_menu_from_options(), 'int')
                 if choice == 1:
                     make_new_record(ordered_patient_table, patient_name, user_type)
         else:
@@ -741,7 +756,7 @@ def signup(user_type):
             #doesnt exist, make a new record.
             make_new_record(ordered_patient_table, patient_name, user_type)
     elif user_type == "D":
-        doctor_name = input("Enter doctor name: ")
+        doctor_name = cinput("Enter doctor name: ")
         #check if it already exists in doctors table.
         with Halo(text='Retrieving data...', spinner=spinnerType):
             c.execute('select * FROM doctors ORDER BY DoctorID') ##orderby functionality here!
@@ -749,7 +764,7 @@ def signup(user_type):
         (dExists, doctor_record) = zampy.check_record_exists(doctor_name, 1, ordered_doctor_table)
         if dExists:
             colorify(f"Username already exists with doctor data: {doctor_record}!", 'error') #add column names - !!
-            confirm = input("Do you confirm this is your data? (Y/N): ")
+            confirm = cinput("Do you confirm this is your data? (Y/N): ")
             if confirm in 'Yy':
                 password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[doctor_record[0]], returnAllData=False)
                 password = password[0]
@@ -760,7 +775,7 @@ def signup(user_type):
                     incorrectPassword()
             else:
                 colorify("Would you like to create a new account with this name?", 'ask')
-                choice = int(input(zampy.make_menu_from_options()))
+                choice = cinput(zampy.make_menu_from_options(), 'int')
                 if choice == 1:
                     make_new_record(ordered_doctor_table, doctor_name, user_type)
         else:
@@ -768,7 +783,7 @@ def signup(user_type):
             #doesnt exist, make a new record.
             make_new_record(ordered_doctor_table, doctor_name, user_type)
     elif user_type == 'A':
-        admin_name = input("Enter admin name: ")
+        admin_name = cinput("Enter admin name: ")
         #check if it already exists in doctors table.
         with Halo(text='Retrieving data...', spinner=spinnerType):
             c.execute('select * FROM admins ORDER BY adminID') ##orderby functionality here!
@@ -777,7 +792,7 @@ def signup(user_type):
         if aExists:
             colorify(f"Username already exists with admin data: {admin_record}!", 'error') #add column names - !!
             colorify("Do you confirm this is your data?", 'ask')
-            confirm = int(input(zampy.make_menu_from_options()))
+            confirm = cinput(zampy.make_menu_from_options(), 'int')
             if confirm == 1:
                 password = retreiveData("credentials", columnNames=["password"], conditionNames=['userid'], conditionValues=[admin_record[0]], returnAllData=False)
                 #print('password:', password)
@@ -790,7 +805,7 @@ def signup(user_type):
                         incorrectPassword()
                 else:
                     colorify("The user was found with no password. Enter new password?", 'ask')
-                    choice = int(input(zampy.make_menu_from_options()))
+                    choice = cinput(zampy.make_menu_from_options(), 'int')
                     if choice == 1:
                         colorify("Type a new ", 'ask',end=True)
                         newPassword = askForPassword()
@@ -802,7 +817,7 @@ def signup(user_type):
                         start_program()
             else:
                 colorify("Would you like to create a new account with this name?", 'ask')
-                choice = int(input(zampy.make_menu_from_options()))
+                choice = cinput(zampy.make_menu_from_options(), 'int')
                 if choice == 1:
                     #make_new_record(ordered_admin_table, admin_name, user_type)
                     requestExistingAdminToSignUp(admin_name)
@@ -814,10 +829,10 @@ def login(user_type):
     global current_user_data
     global current_user_type
     if user_type == "P":
-        requested_id = (input("Enter patient ID: "))
+        requested_id = cinput("Enter patient ID: ")
         record = retreiveData("patients", conditionNames=['patientID'], conditionValues=[requested_id], returnAllData=False)
         if record is None:
-            requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
+            requSignUp = cinput("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
                 signup(user_type)
             else:
@@ -832,7 +847,7 @@ def login(user_type):
                 colorify(f"Succesfully logged in as {current_user_data[1]}.", 'success') #Succesfully logged in as zeeman4
                 
                 colorify('One time login?', 'ask')
-                onetimelogin = int(input(zampy.make_menu_from_options()))
+                onetimelogin = cinput(zampy.make_menu_from_options(), 'int')
                 if onetimelogin == 2:
                     bfile = open(login_file, "wb")
                     pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
@@ -840,7 +855,7 @@ def login(user_type):
                 incorrectPassword()
 
     elif user_type == "D":
-        requested_id = (input("Enter doctor ID: "))
+        requested_id = cinput("Enter doctor ID: ")
         #c.execute(f"select * from doctors where doctorid = '{requested_id}'")
         #record = c.fetchone()
 
@@ -848,7 +863,7 @@ def login(user_type):
 
 
         if record is None:
-            requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
+            requSignUp = cinput("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
                 signup(user_type)
         else:
@@ -859,18 +874,18 @@ def login(user_type):
                 current_user_data = record
                 colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                 colorify('One time login?', 'ask')
-                onetimelogin = int(input(zampy.make_menu_from_options()))
+                onetimelogin = cinput(zampy.make_menu_from_options(), 'int')
                 if onetimelogin == 2:
                     bfile = open(login_file, "wb")
                     pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
             else:
                 incorrectPassword()
     elif user_type == 'A':
-        requested_id = (input("Enter admin ID: "))
+        requested_id = cinput("Enter admin ID: ")
         record = retreiveData("admins", conditionNames=['adminID'], conditionValues=[requested_id], returnAllData=False)
 
         if record is None:
-            requSignUp = input("Requested ID doesnt exist. Sign up? (Y/N)")
+            requSignUp = cinput("Requested ID doesnt exist. Sign up? (Y/N)")
             if requSignUp in 'Yy':
                 signup(user_type)
         else:
@@ -882,7 +897,7 @@ def login(user_type):
                     current_user_data = record
                     colorify(f"Succesfully logged in as {current_user_data[1]}", 'success')
                     colorify('One time login?', 'ask')
-                    onetimelogin = int(input(zampy.make_menu_from_options()))
+                    onetimelogin = cinput(zampy.make_menu_from_options(), 'int')
                     if onetimelogin == 2:
                         bfile = open(login_file, "wb")
                         pickle.dump([current_user_type, current_user_data, bcrypt.hashpw(cpasswordbytes, bcrypt.gensalt())], bfile)
@@ -892,7 +907,7 @@ def login(user_type):
                     incorrectPassword()
             else:
                 colorify("The user was found with no password. Enter new password?", 'ask')
-                choice = int(input(zampy.make_menu_from_options()))
+                choice = cinput(zampy.make_menu_from_options(), 'int')
                 if choice == 1:
                     newPassword = askForPassword()
                     while newPassword == None or newPassword == "":
@@ -905,7 +920,7 @@ def login(user_type):
 def attain_creds(currentUserType):
     if currentUserType == 'P':
         colorify("Log in or sign up as patient?", 'ask')
-        useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
+        useridentify = cinput(zampy.make_menu_from_options(['Sign up', 'Log in']), 'int')
         if useridentify == 1:
             signup(current_user_type)
             
@@ -913,7 +928,7 @@ def attain_creds(currentUserType):
             login(current_user_type)
     elif currentUserType == 'D':
         colorify("Log in or sign up as doctor?", 'ask')
-        useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
+        useridentify = cinput(zampy.make_menu_from_options(['Sign up', 'Log in']), 'int')
         if useridentify == 1:
             signup(current_user_type)
             
@@ -921,7 +936,7 @@ def attain_creds(currentUserType):
             login(current_user_type)
     elif current_user_type == 'A':
         colorify("Log in or sign up as admin?", 'ask')
-        useridentify = int(input(zampy.make_menu_from_options(['Sign up', 'Log in'])))
+        useridentify = cinput(zampy.make_menu_from_options(['Sign up', 'Log in']), 'int')
         if useridentify == 1:
             signup(current_user_type)
             
@@ -1136,7 +1151,7 @@ while True:
 
     colorify("Enter action: ", 'ask')
     try:
-        tempIndex = int(input(options_menu_str))
+        tempIndex = cinput(options_menu_str, 'int')
         action = options_dict[tempIndex]
     except ValueError:
         colorify("Enter data of correct datatype.", 'error')
@@ -1150,19 +1165,19 @@ while True:
             log(f'Error occured while trying to read index: {e}')
         else:
             if index == 0:
-                patientID = (input("Enter patient ID: "))
+                patientID = cinput("Enter patient ID: ")
                 data = viewPatientDetails(patientID)
                 #print("Requested data:", data)
                 #print_header('Patient Details')
                 makePrettyTable('patients', [data])
             elif index == 1:
-                doctorID = (input("Enter doctor ID: "))
+                doctorID = cinput("Enter doctor ID: ")
                 data = viewDoctorDetails(doctorID)
                 #print("Requested data:", data)
                 makePrettyTable('doctors', [data])
             elif index == 2:
                 #Make an appointment
-                doctorName = input("Enter doctor name to make appointment to: ")
+                doctorName = cinput("Enter doctor name to make appointment to: ")
                 doctorID = None
                 with Halo(text='Retrieving data...', spinner=spinnerType):
                     c.execute(f'select * from doctors where LOWER(name) = "{doctorName.lower()}"')
@@ -1170,7 +1185,7 @@ while True:
                 if possibleDoctorIDs and checkIfNonNull(possibleDoctorIDs) == True:
                     if len(possibleDoctorIDs) > 1:
                         colorify('Choose doctor:', 'ask')
-                        choice = int(input(zampy.make_menu_from_options(possibleDoctorIDs)))
+                        choice = cinput(zampy.make_menu_from_options(possibleDoctorIDs), 'int')
                         doctorID = possibleDoctorIDs[choice-1][0]
                     else:
                         doctorID = possibleDoctorIDs[0][0]
@@ -1181,7 +1196,7 @@ while True:
                 appointmentDate = zampy.choose_date()
                 appointmentTime = zampy.choose_time()
 
-                appointmentReasonIndex = int(input(zampy.make_menu_from_options(['Check-up', 'Surgery', 'Physical Exam', 'Health Assessment'])))
+                appointmentReasonIndex = cinput(zampy.make_menu_from_options(['Check-up', 'Surgery', 'Physical Exam', 'Health Assessment']), 'int')
                 if appointmentReasonIndex == 1:
                     appointmentReason = "Check-up"
                 elif appointmentReasonIndex == 2:
@@ -1193,11 +1208,11 @@ while True:
                 makeAppointment(current_user_data[0], doctorID, appointmentDate, appointmentTime, appointmentReason)
             elif index == 3:
                 historyOptions = ['Access using a recordID', 'Access your records by specific doctor (doctorID)', 'Access your history'] #add more options here
-                historyIndex = int(input(zampy.make_menu_from_options(historyOptions)))
+                historyIndex = cinput(zampy.make_menu_from_options(historyOptions), 'int')
                 current_patient_id = current_user_data[0]
                 data = None
                 if historyIndex == 1:
-                    recordID = (input("Enter recordID: "))
+                    recordID = cinput("Enter recordID: ")
                     c.execute(f'select * from medicalhistory where recordID = "{recordID}"')
                     assumedRecord = c.fetchone()
                     if assumedRecord[1] == current_user_data[0]:
@@ -1206,7 +1221,7 @@ while True:
                         colorify('You can\'t access another patient\'s medical history!', 'error')
                     #print(data)
                 elif historyIndex == 2:
-                    doctorID = (input("Enter doctor ID: "))
+                    doctorID = cinput("Enter doctor ID: ")
                     data = viewRecordDetails(current_patient_id, doctorID=doctorID)
                     #print(data)
                 elif historyIndex == 3:
@@ -1214,23 +1229,23 @@ while True:
                 if data:
                     makePrettyTable('medicalhistory', data)
             elif index == 4:
-                idOrAll = int(input(zampy.make_menu_from_options(['View all prescriptions', 'View by ID'])))
+                idOrAll = cinput(zampy.make_menu_from_options(['View all prescriptions', 'View by ID']), 'int')
                 if idOrAll == 1:
                     data = viewPrescriptions(all=True) #expand to finding by name, and id
                     #print(data)
                     #makePrettyTable('prescriptions', data)
                 elif idOrAll == 2:
-                    data = viewPrescriptions(all=False, pID=input("Enter prescription ID: "))
+                    data = viewPrescriptions(all=False, pID=cinput("Enter prescription ID: "))
                 makePrettyTable('prescriptions', data)
             elif index == 5:
                 #Access medical history of a patient
-                patientID = input("Enter patient ID: ")
+                patientID = cinput("Enter patient ID: ")
                 data = viewRecordDetails(patientID=patientID, all=True)
                 makePrettyTable('medicalhistory', data)
             elif index == 6:
                 #Access appointments history
                 options = ['Upcoming appointments', 'Completed appointments']
-                index = int(input(zampy.make_menu_from_options(options)))
+                index = cinput(zampy.make_menu_from_options(options), 'int')
                 if index == 1:
                     with Halo(text='Retrieving data...', spinner=spinnerType):
                         c.execute("SELECT * FROM appointments WHERE doctorID = %s AND status = %s AND appointmentDate >= %s", (current_user_data[0], 'Scheduled', str(date.today().isoformat())))
@@ -1249,7 +1264,7 @@ while True:
                 dealWithPendingRequests()
             elif index == 8:
                 #View table
-                table_name = input("Enter table name to access: ")
+                table_name = cinput("Enter table name to access: ")
                 try:
                     with Halo(text='Retrieving data...', spinner=spinnerType):
                         c.execute(f'select * from {table_name}')
@@ -1273,7 +1288,7 @@ while True:
                 data = retreiveData(tablename, allColumns=True)
                 if len(data) > 0 and checkIfNonNull(data) == True:
                     options = [f'Add {tablename[:len(tablename)-1]}', f'Modify existing {tablename[:len(tablename)-1]}', f'Delete {tablename[:len(tablename)-1]}']
-                    choice = int(input(zampy.make_menu_from_options(options)))
+                    choice = cinput(zampy.make_menu_from_options(options), 'int')
                     if choice == 1:
                         #Add patient
                         allColumns = fetchColumns(tablename)
@@ -1285,9 +1300,9 @@ while True:
                             if column == 'DOB':
                                 data = zampy.choose_date()
                             elif column == 'Phone':
-                                data = int(input('Enter phone number: '))
+                                data = cinput('Enter phone number: ', 'int')
                             else:
-                                data = input(f'Enter {column}: ')
+                                data = cinput(f'Enter {column}: ')
                             tempRecord.append(data)
                         #Try adding to patient table
                         try:
@@ -1299,7 +1314,7 @@ while True:
                             colorify(f'Succefully created new {tablename[:len(tablename)-1]} record.', 'success')
                     elif choice == 2:
                         #Modify existing patient
-                        reqID = (input(f'Enter {tablename[:len(tablename)-1]} ID:'))
+                        reqID = (cinput(f'Enter {tablename[:len(tablename)-1]} ID:'))
                         c.execute(f'select * from {tablename} where {tablename[:len(tablename)-1]}ID = "{reqID}";')
                         data = c.fetchone()
                         if len(data) > 0 and checkIfNonNull(data) == True:
@@ -1312,7 +1327,7 @@ while True:
                                     colorify(f'Edit {columnName}?', 'ask')
                                 else:
                                     colorify(f'Edit {columnName}?', 'ask')
-                                confirmEdit = int(input(zampy.make_menu_from_options()))
+                                confirmEdit = cinput(zampy.make_menu_from_options(), 'int')
                                 if confirmEdit == 1:
                                     if 'date' in (datatypehere):
                                         if debug:
@@ -1322,7 +1337,7 @@ while True:
                                         if debug:
                                             colorify(f'{columnName} is of type {datatypehere}', 'debug')
                                         try:
-                                            input_data = int(input("Enter new data: "))
+                                            input_data = cinput("Enter new data: ", 'int')
                                         except ValueError:
                                             colorify('Enter data of correct type.', 'error')
                                         except Exception as e:
@@ -1330,7 +1345,7 @@ while True:
                                     else:
                                         if debug:
                                             colorify(f'{columnName} is of type {datatypehere}', 'debug')
-                                        input_data = input('Enter new data: ')
+                                        input_data = cinput('Enter new data: ')
                                     try:
                                         c.execute(f'update {tablename} set {columnName} = "{input_data}" where {tablename[:len(tablename)-1]}ID = "{reqID}"')
                                         database.commit()
@@ -1345,7 +1360,7 @@ while True:
 
                     elif choice == 3:
                         #Delete patient
-                        reqID = (input(f'Enter {tablename[:len(tablename)-1]} ID:'))
+                        reqID = (cinput(f'Enter {tablename[:len(tablename)-1]} ID:'))
                         c.execute(f'select * from {tablename} where {tablename[:len(tablename)-1]}ID = "{reqID}";')
                         data = c.fetchone()
                         try:
@@ -1373,7 +1388,7 @@ while True:
                 data = retreiveData(tablename, allColumns=True)
                 if len(data) > 0 and checkIfNonNull(data) == True:
                     options = [f'Add {tablename[:len(tablename)-1]}', f'Modify existing {tablename[:len(tablename)-1]}', f'Delete {tablename[:len(tablename)-1]}']
-                    choice = int(input(zampy.make_menu_from_options(options)))
+                    choice = cinput(zampy.make_menu_from_options(options), 'int')
                     if choice == 1:
                         #Add patient
                         allColumns = fetchColumns(tablename)
@@ -1385,9 +1400,9 @@ while True:
                             if column == 'DOB':
                                 data = zampy.choose_date()
                             elif column == 'Phone':
-                                data = int(input('Enter phone number: '))
+                                data = cinput('Enter phone number: ', 'int')
                             else:
-                                data = input(f'Enter {column}: ')
+                                data = cinput(f'Enter {column}: ')
                             tempRecord.append(data)
                         #Try adding to patient table
                         try:
@@ -1399,7 +1414,7 @@ while True:
                             colorify(f'Succefully created new {tablename[:len(tablename)-1]} record.', 'success')
                     elif choice == 2:
                         #Modify existing patient
-                        reqID = (input(f'Enter {tablename[:len(tablename)-1]} ID:'))
+                        reqID = cinput(f'Enter {tablename[:len(tablename)-1]} ID:')
                         c.execute(f'select * from {tablename} where {tablename[:len(tablename)-1]}ID = "{reqID}";')
                         data = c.fetchone()
                         if len(data) > 0 and checkIfNonNull(data) == True:
@@ -1412,7 +1427,7 @@ while True:
                                     colorify(f'Edit {columnName}?', 'ask')
                                 else:
                                     colorify(f'Edit {columnName}?', 'ask')
-                                confirmEdit = int(input(zampy.make_menu_from_options()))
+                                confirmEdit = cinput(zampy.make_menu_from_options(), 'int')
                                 if confirmEdit == 1:
                                     if 'date' in (datatypehere):
                                         if debug:
@@ -1421,16 +1436,11 @@ while True:
                                     elif 'int' in (datatypehere):
                                         if debug:
                                             colorify(f'{columnName} is of type {datatypehere}', 'debug')
-                                        try:
-                                            input_data = int(input("Enter new data: "))
-                                        except ValueError:
-                                            colorify('Enter data of correct type.', 'error')
-                                        except Exception as e:
-                                            colorify(f'Some error occured: {e}', 'error')
+                                            input_data = cinput("Enter new data: ", 'int')
                                     else:
                                         if debug:
                                             colorify(f'{columnName} is of type {datatypehere}', 'debug')
-                                        input_data = input('Enter new data: ')
+                                        input_data = cinput('Enter new data: ')
                                     try:
                                         c.execute(f'update {tablename} set {columnName} = "{input_data}" where {tablename[:len(tablename)-1]}ID = "{reqID}"')
                                         database.commit()
@@ -1445,7 +1455,7 @@ while True:
 
                     elif choice == 3:
                         #Delete patient
-                        reqID = (input(f'Enter {tablename[:len(tablename)-1]} ID:'))
+                        reqID = (cinput(f'Enter {tablename[:len(tablename)-1]} ID:'))
                         c.execute(f'select * from {tablename} where {tablename[:len(tablename)-1]}ID = "{reqID}";')
                         data = c.fetchone()
                         try:
@@ -1459,7 +1469,7 @@ while True:
                             colorify(f'Succesfully deleted {tablename[:len(tablename)-1]} from {tablename}.', 'success')
             elif index == 11:
                 #Execute custom SQL command
-                sql_command = input("Enter sql command:\n")
+                sql_command = cinput("Enter sql command:\n")
                 try:
                     with Halo(text='Retrieving data...', spinner=spinnerType):
                         c.execute(sql_command)
@@ -1502,7 +1512,7 @@ while True:
                     columnName = allColumns[index]
                     if checkIfNonNull(datavalue) == False:
                         colorify(f'{columnName} was found to be empty. Enter data now?', 'ask')
-                        choice = int(input(zampy.make_menu_from_options()))
+                        choice = cinput(zampy.make_menu_from_options(), 'int')
                         if choice == 1:
                             #c.execute(f'SELECT frs.name, frs.system_type_name FROM sys.dm_exec_describe_first_result_set("select * from {tablename}",NULL,NULL) frs;')
                             datatypehere = dict_columntypes[columnName.lower()]
@@ -1513,16 +1523,11 @@ while True:
                             elif 'int' in (datatypehere):
                                 if debug:
                                     colorify(f'{columnName} is of type {datatypehere}', 'debug')
-                                try:
-                                    input_data = int(input("Enter data: "))
-                                except ValueError:
-                                    colorify('Enter data of correct type.', 'error')
-                                except Exception as e:
-                                    colorify(f'Some error occured: {e}', 'error')
+                                    input_data = cinput("Enter data: ", 'int')
                             else:
                                 if debug:
                                     colorify(f'{columnName} is of type {datatypehere}', 'debug')
-                                input_data = input('Enter data: ')
+                                input_data = cinput('Enter data: ')
                             try:
                                 c.execute(f'update {tablename} set {columnName} = "{input_data}" where {id} = "{current_user_data[0]}"')
                                 database.commit()
@@ -1541,7 +1546,7 @@ while True:
                             colorify(f'Would you like to edit {columnName}? (Current Value: {friendlyYear(datavalue, convertMD=True)})', 'ask')
                         else:
                             colorify(f'Would you like to edit {columnName}? (Current Value: {datavalue})', 'ask')
-                        confirmEdit = int(input(zampy.make_menu_from_options()))
+                        confirmEdit = cinput(zampy.make_menu_from_options(), 'int')
                         if confirmEdit == 1:
                             #colorify(f'{columnName} was found to be empty. Enter data now?', 'ask')
                             #choice = int(input(zampy.make_menu_from_options()))
@@ -1555,7 +1560,7 @@ while True:
                                 if debug:
                                     colorify(f'{columnName} is of type {datatypehere}', 'debug')
                                 try:
-                                    input_data = int(input("Enter new data: "))
+                                    input_data = cinput("Enter new data: ", 'int')
                                 except ValueError:
                                     colorify('Enter data of correct type.', 'error')
                                 except Exception as e:
@@ -1563,7 +1568,7 @@ while True:
                             else:
                                 if debug:
                                     colorify(f'{columnName} is of type {datatypehere}', 'debug')
-                                input_data = input('Enter new data: ')
+                                input_data = cinput('Enter new data: ')
                             try:
                                 c.execute(f'update {tablename} set {columnName} = "{input_data}" where {id} = "{current_user_data[0]}"')
                                 database.commit()
